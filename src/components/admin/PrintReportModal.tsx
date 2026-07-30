@@ -79,9 +79,9 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm flex items-start justify-center p-2 sm:p-4 md:p-6 animate-fadeIn">
+    <div className="print-modal-overlay fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm flex items-start justify-center p-2 sm:p-4 md:p-6 animate-fadeIn">
       {/* Container Box */}
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden my-4 sm:my-8 flex flex-col">
+      <div className="print-modal-shell bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden my-4 sm:my-8 flex flex-col">
         {/* Modal Sticky Top Toolbar (Hidden during browser print) */}
         <div className="no-print bg-slate-900 text-white p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-10 border-b border-slate-800">
           <div className="flex items-center gap-2">

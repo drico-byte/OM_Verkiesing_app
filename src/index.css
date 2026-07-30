@@ -57,6 +57,21 @@
     background: #ffffff !important;
   }
 
+  /*
+   * The print targets above live inside a fixed, viewport-clipped modal
+   * (position: fixed + overflow-y: auto). Without this, only the portion
+   * visible in that viewport prints, and it repeats on every page because
+   * fixed elements are meant to recur on each printed page.
+   */
+  .print-modal-overlay,
+  .print-modal-shell {
+    position: static !important;
+    inset: auto !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
   .no-print {
     display: none !important;
   }
