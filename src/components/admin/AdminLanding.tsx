@@ -112,7 +112,7 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
       adminPassword: editAdminPassword.trim() || 'OMAdmin123!',
       welcomeMessage: editWelcomeMessage.trim(),
       schoolLogoUrl: logoPreview,
-      schoolName: editSchoolName.trim() || 'Hoërskool Oranje',
+      schoolName: editSchoolName.trim(),
     });
     setSettingsSuccess('Stelsel-instellings is suksesvol opgedateer.');
     setTimeout(() => setSettingsSuccess(null), 4000);
@@ -319,7 +319,7 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
                   required
                   value={editSchoolName}
                   onChange={(e) => setEditSchoolName(e.target.value)}
-                  placeholder="Bv. Hoërskool Oranje"
+                  placeholder="Bv. Hoërskool ABC"
                   className="mt-2 block w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white"
                 />
               </div>

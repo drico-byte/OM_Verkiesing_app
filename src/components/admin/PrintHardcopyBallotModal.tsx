@@ -13,7 +13,7 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
   const [includeVoterDetails, setIncludeVoterDetails] = useState(true);
   const [includeStampBox, setIncludeStampBox] = useState(true);
   const settings = getStoredAdminSettings();
-  const schoolName = settings.schoolName || 'Hoërskool Oranje';
+  const schoolName = settings.schoolName || 'Hoërskool Verkiesings';
 
   const issueDate = new Date().toLocaleDateString('af-ZA', {
     year: 'numeric',

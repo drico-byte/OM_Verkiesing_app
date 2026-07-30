@@ -12,7 +12,7 @@ interface PrintReportModalProps {
 export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onClose }) => {
   const [copied, setCopied] = useState(false);
   const settings = getStoredAdminSettings();
-  const schoolName = settings.schoolName || 'Hoërskool Oranje';
+  const schoolName = settings.schoolName || 'Hoërskool Verkiesings';
 
   const totalValid = ballot.validVoterIds.length;
   const totalVotesCast = ballot.votes.length;

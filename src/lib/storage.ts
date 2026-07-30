@@ -25,7 +25,7 @@ export const INITIAL_ADMIN_SETTINGS: AdminSettings = {
   adminPassword: 'OMAdmin123!',
   welcomeMessage: 'Welkom by die Hoërskool Verkiesingsportaal. Voer asseblief jou toelatingskode in om voort te gaan.',
   schoolLogoUrl: null,
-  schoolName: 'Hoërskool Oranje',
+  schoolName: '',
 };
 
 export const INITIAL_BALLOTS: Ballot[] = [];
