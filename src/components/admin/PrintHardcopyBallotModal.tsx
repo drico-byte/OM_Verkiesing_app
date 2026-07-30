@@ -127,15 +127,9 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
 
   ${includeStampBox ? `
   <div class="footer">
-    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-      <div>
-        <div style="margin-bottom: 6px;"><strong>Toesighouer / Verkiesingsbeampte Naam:</strong> ___________________________________</div>
-        <div><strong>Handtekening:</strong> ___________________________________  <strong>Datum:</strong> __________________</div>
-      </div>
-      <div style="border: 2px dashed #94a3b8; width: 140px; height: 75px; display: flex; align-items: center; justify-content: center; text-align: center; color: #64748b; font-size: 10px; text-transform: uppercase;">
-        Amptelike Skool Stempel
-      </div>
-    </div>
+    <div style="margin-bottom: 6px;"><strong>Toesighouer / Verkiesingsbeampte Naam:</strong> ___________________________________</div>
+    <div style="margin-bottom: 6px;"><strong>Handtekening van Toesighouer:</strong> ___________________________________</div>
+    <div><strong>Datum:</strong> __________________</div>
   </div>
   ` : ''}
 </body>
@@ -298,7 +292,7 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
                 onChange={(e) => setIncludeStampBox(e.target.checked)}
                 className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"
               />
-              <span>Sluit Skool Stempel Blok In</span>
+              <span>Sluit Amptenaar Sertifisering In</span>
             </label>
           </div>
 
@@ -396,21 +390,14 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
             )}
           </div>
 
-          {/* Invigilator Audit & Stamp Stub */}
+          {/* Invigilator Audit Sign-off */}
           {includeStampBox && (
-            <div className="pt-6 border-t-2 border-slate-900 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-center">
-                <div className="sm:col-span-2 space-y-3">
-                  <div className="text-xs font-bold text-slate-900 uppercase tracking-wider">Amptelike Verkiesingsbeampte Sertifisering:</div>
-                  <div className="text-xs text-slate-700 space-y-2 font-mono">
-                    <div>Gekontroleer &amp; Ontvang deur (Naam): ____________________________________</div>
-                    <div>Handtekening van Toesighouer: _____________________  Datum: ____________</div>
-                  </div>
-                </div>
-
-                <div className="border-2 border-dashed border-slate-400 rounded-xl h-24 flex items-center justify-center p-2 text-center text-[10px] font-mono text-slate-500 uppercase tracking-wider">
-                  Amptelike Skool Stempel / Kantoor Paraaf
-                </div>
+            <div className="pt-6 border-t-2 border-slate-900 space-y-3">
+              <div className="text-xs font-bold text-slate-900 uppercase tracking-wider">Amptelike Verkiesingsbeampte Sertifisering:</div>
+              <div className="text-xs text-slate-700 space-y-2 font-mono">
+                <div>Gekontroleer &amp; Ontvang deur (Naam): ____________________________________</div>
+                <div>Handtekening van Toesighouer: ____________________________________</div>
+                <div>Datum: ____________</div>
               </div>
             </div>
           )}
