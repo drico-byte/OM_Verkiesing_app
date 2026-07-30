@@ -32,13 +32,15 @@ export const CandidatesTab: React.FC<CandidatesTabProps> = ({
       grade: grade.trim() || undefined,
     };
 
-    let updatedBoys = [...ballot.boysCandidates];
-    let updatedGirls = [...ballot.girlsCandidates];
+    const updatedBoys = [...ballot.boysCandidates];
+    const updatedGirls = [...ballot.girlsCandidates];
 
     if (gender === 'seun') {
       updatedBoys.push(newCandidate);
+      updatedBoys.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
     } else {
       updatedGirls.push(newCandidate);
+      updatedGirls.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
     }
 
     onUpdateBallot({

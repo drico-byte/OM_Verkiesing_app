@@ -49,11 +49,14 @@ export const UploadDataTab: React.FC<UploadDataTabProps> = ({
       (g) => !existingGirlNames.has(g.name.toLowerCase())
     );
 
+    const sortByName = (a: Candidate, b: Candidate) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+
     const updatedBallot: Ballot = {
       ...ballot,
       validVoterIds: updatedVoters,
-      boysCandidates: [...ballot.boysCandidates, ...newBoys],
-      girlsCandidates: [...ballot.girlsCandidates, ...newGirls],
+      boysCandidates: [...ballot.boysCandidates, ...newBoys].sort(sortByName),
+      girlsCandidates: [...ballot.girlsCandidates, ...newGirls].sort(sortByName),
     };
 
     onUpdateBallot(updatedBallot);
