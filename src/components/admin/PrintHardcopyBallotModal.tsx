@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Printer, Download, Copy, Check, X, FileText, CheckSquare, ShieldCheck } from 'lucide-react';
 import { Ballot } from '../../types';
 import { getStoredAdminSettings } from '../../lib/storage';
@@ -187,7 +188,7 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
     setTimeout(() => setCopied(false), 2500);
   };
 
-  return (
+  return createPortal(
     <div className="print-modal-overlay fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm flex items-start justify-center p-2 sm:p-4 md:p-6 animate-fadeIn">
       {/* Container Box */}
       <div className="print-modal-shell bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden my-4 sm:my-8 flex flex-col">
@@ -430,6 +431,7 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
 
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

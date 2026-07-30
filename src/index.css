@@ -33,22 +33,18 @@
     color: #000000 !important;
   }
 
-  body * {
-    visibility: hidden !important;
-  }
-
-  #printable-election-report,
-  #printable-election-report *,
-  #printable-hardcopy-ballot,
-  #printable-hardcopy-ballot * {
-    visibility: visible !important;
+  /*
+   * PrintHardcopyBallotModal and PrintReportModal render via a React portal
+   * straight into <body>, so hiding the app root is enough to leave only the
+   * portaled modal in the printed document - no need to fight visibility on
+   * every other element or fake the modal's position back onto the page.
+   */
+  #root {
+    display: none !important;
   }
 
   #printable-election-report,
   #printable-hardcopy-ballot {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
     width: 100% !important;
     margin: 0 !important;
     padding: 24px !important;
@@ -58,18 +54,34 @@
   }
 
   /*
-   * The print targets above live inside a fixed, viewport-clipped modal
-   * (position: fixed + overflow-y: auto). Without this, only the portion
-   * visible in that viewport prints, and it repeats on every page because
-   * fixed elements are meant to recur on each printed page.
+   * The modal itself is a fixed, viewport-clipped overlay for on-screen use
+   * (position: fixed + overflow-y: auto). For print it needs to become a
+   * normal flowing block so its full content can paginate across pages
+   * instead of being clipped to one viewport-sized snapshot.
    */
-  .print-modal-overlay,
-  .print-modal-shell {
+  .print-modal-overlay {
     position: static !important;
     inset: auto !important;
     overflow: visible !important;
     height: auto !important;
     max-height: none !important;
+    padding: 0 !important;
+    background: none !important;
+    backdrop-filter: none !important;
+    display: block !important;
+  }
+
+  .print-modal-shell {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    display: block !important;
   }
 
   .no-print {
