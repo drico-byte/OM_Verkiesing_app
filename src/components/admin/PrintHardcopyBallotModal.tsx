@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, Download, Copy, Check, X, FileText, CheckSquare } from 'lucide-react';
-import { Ballot } from '../../types';
+import { Ballot, Candidate } from '../../types';
 import { getStoredAdminSettings } from '../../lib/storage';
 
 interface PrintHardcopyBallotModalProps {
@@ -27,27 +27,53 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
   };
 
   const handleDownloadHtml = () => {
-    const boysRows = ballot.boysCandidates.map((c, i) => `
+    const buildCandidateRows = (candidates: Candidate[], numberOffset: number) => candidates.map((c, i) => `
       <tr>
-        <td style="border: 1px solid #334155; padding: 10px; text-align: center; width: 50px;">
-          <div style="width: 22px; height: 22px; border: 2px solid #0f172a; margin: 0 auto; background: #ffffff;"></div>
+        <td style="border: 1px solid #334155; padding: 6px; text-align: center; width: 36px;">
+          <div style="width: 16px; height: 16px; border: 2px solid #0f172a; margin: 0 auto; background: #ffffff;"></div>
         </td>
-        <td style="border: 1px solid #334155; padding: 10px; font-weight: bold; width: 40px; text-align: center;">${i + 1}</td>
-        <td style="border: 1px solid #334155; padding: 10px; font-weight: bold;">${c.name}</td>
-        <td style="border: 1px solid #334155; padding: 10px; width: 100px;">${c.grade || '-'}</td>
+        <td style="border: 1px solid #334155; padding: 6px; font-weight: bold; width: 28px; text-align: center;">${numberOffset + i + 1}</td>
+        <td style="border: 1px solid #334155; padding: 6px; font-weight: bold;">${c.name}</td>
       </tr>
     `).join('');
 
-    const girlsRows = ballot.girlsCandidates.map((c, i) => `
-      <tr>
-        <td style="border: 1px solid #334155; padding: 10px; text-align: center; width: 50px;">
-          <div style="width: 22px; height: 22px; border: 2px solid #0f172a; margin: 0 auto; background: #ffffff;"></div>
-        </td>
-        <td style="border: 1px solid #334155; padding: 10px; font-weight: bold; width: 40px; text-align: center;">${i + 1}</td>
-        <td style="border: 1px solid #334155; padding: 10px; font-weight: bold;">${c.name}</td>
-        <td style="border: 1px solid #334155; padding: 10px; width: 100px;">${c.grade || '-'}</td>
-      </tr>
-    `).join('');
+    const buildCandidateTable = (rows: string, emptyMessage: string) => `
+      <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+        <thead>
+          <tr>
+            <th style="width: 36px; text-align: center; background: #f1f5f9; border: 1px solid #334155; padding: 6px; text-transform: uppercase; font-size: 10px;">Stem</th>
+            <th style="width: 28px; text-align: center; background: #f1f5f9; border: 1px solid #334155; padding: 6px; text-transform: uppercase; font-size: 10px;">Nr</th>
+            <th style="text-align: left; background: #f1f5f9; border: 1px solid #334155; padding: 6px; text-transform: uppercase; font-size: 10px;">Kandidaat Naam</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows || `<tr><td colspan="3" style="text-align:center; padding:15px; color:#64748b;">${emptyMessage}</td></tr>`}
+        </tbody>
+      </table>
+    `;
+
+    const buildCandidateColumnsHtml = (candidates: Candidate[], emptyMessage: string) => {
+      const mid = Math.ceil(candidates.length / 2);
+      const left = candidates.slice(0, mid);
+      const right = candidates.slice(mid);
+      const leftTable = buildCandidateTable(buildCandidateRows(left, 0), emptyMessage);
+
+      if (right.length === 0) {
+        return `<div style="margin-top: 10px; margin-bottom: 25px;">${leftTable}</div>`;
+      }
+
+      const rightTable = buildCandidateTable(buildCandidateRows(right, left.length), emptyMessage);
+
+      return `
+        <div style="display: flex; gap: 20px; margin-top: 10px; margin-bottom: 25px;">
+          <div style="flex: 1;">${leftTable}</div>
+          <div style="flex: 1;">${rightTable}</div>
+        </div>
+      `;
+    };
+
+    const boysTablesHtml = buildCandidateColumnsHtml(ballot.boysCandidates, 'Geen seunskandidate gelys nie');
+    const girlsTablesHtml = buildCandidateColumnsHtml(ballot.girlsCandidates, 'Geen dogterskandidate gelys nie');
 
     const htmlContent = `
 <!DOCTYPE html>
@@ -61,8 +87,6 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
     .title { font-size: 22px; font-weight: 900; text-transform: uppercase; margin: 0; }
     .info-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 20px; font-size: 13px; }
     .rules-box { background: #fffbe6; border: 1px solid #ffe58f; border-radius: 8px; padding: 12px 15px; margin-bottom: 20px; font-size: 12px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 25px; font-size: 13px; }
-    th { background: #f1f5f9; border: 1px solid #334155; padding: 8px; text-align: left; text-transform: uppercase; font-size: 11px; }
     .section-title { font-size: 15px; font-weight: bold; margin-top: 20px; border-bottom: 1px solid #94a3b8; padding-bottom: 5px; text-transform: uppercase; }
     .footer { border-top: 2px solid #0f172a; padding-top: 15px; margin-top: 30px; font-size: 11px; }
   </style>
@@ -81,11 +105,10 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
 
   ${includeVoterDetails ? `
   <div class="info-box">
-    <div style="display: flex; justify-content: space-between; gap: 20px; margin-bottom: 12px;">
+    <div style="display: flex; justify-content: space-between; gap: 20px;">
       <div style="flex: 1;"><strong>Leerder Toelatingsnommer:</strong> ____________________________</div>
-      <div style="width: 220px;"><strong>Datum:</strong> ____________________</div>
+      <div style="flex: 1;"><strong>Handtekening van Leerder:</strong> ____________________________</div>
     </div>
-    <div><strong>Handtekening van Leerder:</strong> ____________________________________________________</div>
   </div>
   ` : ''}
 
@@ -96,35 +119,11 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
     3. Stembriewe met meer merke as die maksimum toegelate sal as bedorwe gekanselleer word.
   </div>
 
-  <div class="section-title">Afdeling A: Seunskandidate (Kies Maksimum ${ballot.maxBoyPicks})</div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width: 50px; text-align: center;">Stem</th>
-        <th style="width: 40px; text-align: center;">Nr</th>
-        <th>Kandidaat Naam</th>
-        <th style="width: 100px;">Graad</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${boysRows || '<tr><td colspan="4" style="text-align:center; padding:15px; color:#64748b;">Geen seunskandidate gelys nie</td></tr>'}
-    </tbody>
-  </table>
+  <div class="section-title">Seunskandidate (Kies Maksimum ${ballot.maxBoyPicks})</div>
+  ${boysTablesHtml}
 
-  <div class="section-title page-break-before" style="page-break-before: always; break-before: page;">Afdeling B: Dogterskandidate (Kies Maksimum ${ballot.maxGirlPicks})</div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width: 50px; text-align: center;">Stem</th>
-        <th style="width: 40px; text-align: center;">Nr</th>
-        <th>Kandidaat Naam</th>
-        <th style="width: 100px;">Graad</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${girlsRows || '<tr><td colspan="4" style="text-align:center; padding:15px; color:#64748b;">Geen dogterskandidate gelys nie</td></tr>'}
-    </tbody>
-  </table>
+  <div class="section-title page-break-before" style="page-break-before: always; break-before: page;">Dogterskandidate (Kies Maksimum ${ballot.maxGirlPicks})</div>
+  ${girlsTablesHtml}
 
   ${includeStampBox ? `
   <div class="footer">
@@ -162,7 +161,6 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
 
     text += `--- LEERDER INLIGTING ---\n`;
     text += `Leerder Toelatingsnommer: ______________________\n`;
-    text += `Datum: ___________________________________\n`;
     text += `Handtekening van Leerder: _________________\n\n`;
 
     text += `--- INSTRUKSIES ---\n`;
@@ -184,6 +182,46 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const renderCandidateTable = (candidates: Candidate[], numberOffset: number) => (
+    <table className="w-full text-xs text-left border-collapse border border-slate-900">
+      <thead>
+        <tr className="bg-slate-100 text-slate-900 border-b border-slate-900 font-extrabold uppercase tracking-wider">
+          <th className="py-1.5 px-2 w-10 text-center border-r border-slate-900">Stem</th>
+          <th className="py-1.5 px-2 w-8 text-center border-r border-slate-900">Nr</th>
+          <th className="py-1.5 px-2">Kandidaat Naam</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-slate-900">
+        {candidates.map((c, index) => (
+          <tr key={c.id} className="hover:bg-slate-50">
+            <td className="py-1.5 px-2 text-center border-r border-slate-900">
+              <div className="w-5 h-5 border-2 border-slate-900 rounded bg-white mx-auto"></div>
+            </td>
+            <td className="py-1.5 px-2 font-mono font-bold text-center text-slate-800 border-r border-slate-900">{numberOffset + index + 1}</td>
+            <td className="py-1.5 px-2 font-bold text-slate-900 text-sm">{c.name}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+
+  const renderCandidateColumns = (candidates: Candidate[]) => {
+    const mid = Math.ceil(candidates.length / 2);
+    const left = candidates.slice(0, mid);
+    const right = candidates.slice(mid);
+
+    if (right.length === 0) {
+      return renderCandidateTable(left, 0);
+    }
+
+    return (
+      <div className="flex gap-4">
+        <div className="flex-1">{renderCandidateTable(left, 0)}</div>
+        <div className="flex-1">{renderCandidateTable(right, left.length)}</div>
+      </div>
+    );
   };
 
   return createPortal(
@@ -303,13 +341,9 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
                   <div className="border-b-2 border-slate-800 h-7 flex items-end font-bold text-sm"></div>
                 </div>
                 <div>
-                  <span className="text-slate-600 block text-[11px]">Datum:</span>
-                  <div className="border-b-2 border-slate-800 h-7 flex items-end font-bold text-sm"></div>
+                  <span className="text-slate-600 block text-[11px]">Handtekening van Leerder:</span>
+                  <div className="border-b-2 border-slate-800 h-7"></div>
                 </div>
-              </div>
-              <div className="pt-1">
-                <span className="text-slate-600 block text-[11px]">Handtekening van Leerder:</span>
-                <div className="border-b-2 border-slate-800 h-7"></div>
               </div>
             </div>
           )}
@@ -332,7 +366,7 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
           <div className="space-y-3">
             <div className="flex items-center justify-between border-b-2 border-slate-900 pb-1.5">
               <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <span>Afdeling A: Seunskandidate</span>
+                <span>Seunskandidate</span>
                 <span className="text-xs font-bold text-slate-600 font-mono">(Kies Maksimum {ballot.maxBoyPicks})</span>
               </h2>
               <span className="text-xs font-mono text-slate-500">{ballot.boysCandidates.length} Kandidate</span>
@@ -341,28 +375,7 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
             {ballot.boysCandidates.length === 0 ? (
               <p className="text-xs text-slate-500 italic py-2">Geen seunskandidate vir hierdie stembrief gelys nie.</p>
             ) : (
-              <table className="w-full text-xs text-left border-collapse border border-slate-900">
-                <thead>
-                  <tr className="bg-slate-100 text-slate-900 border-b border-slate-900 font-extrabold uppercase tracking-wider">
-                    <th className="py-2.5 px-3 w-16 text-center border-r border-slate-900">Stem</th>
-                    <th className="py-2.5 px-3 w-12 text-center border-r border-slate-900">Nr</th>
-                    <th className="py-2.5 px-3 border-r border-slate-900">Kandidaat Naam</th>
-                    <th className="py-2.5 px-3 w-28">Graad</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-900">
-                  {ballot.boysCandidates.map((c, index) => (
-                    <tr key={c.id} className="hover:bg-slate-50">
-                      <td className="py-3 px-3 text-center border-r border-slate-900">
-                        <div className="w-6 h-6 border-2 border-slate-900 rounded bg-white mx-auto"></div>
-                      </td>
-                      <td className="py-3 px-3 font-mono font-bold text-center text-slate-800 border-r border-slate-900">{index + 1}</td>
-                      <td className="py-3 px-3 font-bold text-slate-900 border-r border-slate-900 text-sm">{c.name}</td>
-                      <td className="py-3 px-3 font-medium text-slate-700">{c.grade || '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              renderCandidateColumns(ballot.boysCandidates)
             )}
           </div>
 
@@ -370,7 +383,7 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
           <div className="space-y-3 pt-6 page-break-before print:break-before-page" style={{ breakBefore: 'page', pageBreakBefore: 'always' }}>
             <div className="flex items-center justify-between border-b-2 border-slate-900 pb-1.5">
               <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <span>Afdeling B: Dogterskandidate</span>
+                <span>Dogterskandidate</span>
                 <span className="text-xs font-bold text-slate-600 font-mono">(Kies Maksimum {ballot.maxGirlPicks})</span>
               </h2>
               <span className="text-xs font-mono text-slate-500">{ballot.girlsCandidates.length} Kandidate</span>
@@ -379,28 +392,7 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
             {ballot.girlsCandidates.length === 0 ? (
               <p className="text-xs text-slate-500 italic py-2">Geen dogterskandidate vir hierdie stembrief gelys nie.</p>
             ) : (
-              <table className="w-full text-xs text-left border-collapse border border-slate-900">
-                <thead>
-                  <tr className="bg-slate-100 text-slate-900 border-b border-slate-900 font-extrabold uppercase tracking-wider">
-                    <th className="py-2.5 px-3 w-16 text-center border-r border-slate-900">Stem</th>
-                    <th className="py-2.5 px-3 w-12 text-center border-r border-slate-900">Nr</th>
-                    <th className="py-2.5 px-3 border-r border-slate-900">Kandidaat Naam</th>
-                    <th className="py-2.5 px-3 w-28">Graad</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-900">
-                  {ballot.girlsCandidates.map((c, index) => (
-                    <tr key={c.id} className="hover:bg-slate-50">
-                      <td className="py-3 px-3 text-center border-r border-slate-900">
-                        <div className="w-6 h-6 border-2 border-slate-900 rounded bg-white mx-auto"></div>
-                      </td>
-                      <td className="py-3 px-3 font-mono font-bold text-center text-slate-800 border-r border-slate-900">{index + 1}</td>
-                      <td className="py-3 px-3 font-bold text-slate-900 border-r border-slate-900 text-sm">{c.name}</td>
-                      <td className="py-3 px-3 font-medium text-slate-700">{c.grade || '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              renderCandidateColumns(ballot.girlsCandidates)
             )}
           </div>
 
