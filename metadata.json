@@ -1,0 +1,6 @@
+{
+  "name": "Skool Verkiesingsstelsel",
+  "description": "Aanlyn verkiesings- en stembriefstelsel vir 'n Afrikaanse skool vir klasverteenwoordigers en VRL/matriekstemming.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

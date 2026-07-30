@@ -1,0 +1,27 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to validate document IDs
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // Admin Settings document
+    match /settings/admin {
+      allow read, write: if true;
+    }
+
+    // Ballots collection for election management and voting
+    match /ballots/{ballotId} {
+      allow read: if true;
+      allow write: if isValidId(ballotId);
+    }
+
+    // Default deny catch-all for any unmentioned collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

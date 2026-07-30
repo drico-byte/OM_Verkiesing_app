@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "AdminSettings": {
+      "title": "Admin Settings",
+      "description": "Global administrator settings for the election app",
+      "type": "object",
+      "properties": {
+        "adminPassword": { "type": "string" },
+        "welcomeMessage": { "type": "string" },
+        "schoolLogoUrl": { "type": "string" },
+        "schoolName": { "type": "string" }
+      }
+    },
+    "Ballot": {
+      "title": "Ballot",
+      "description": "School election ballot containing candidates, valid voter IDs, and votes",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "accessCode": { "type": "string" },
+        "welcomeMessage": { "type": "string" },
+        "thankYouMessage": { "type": "string" },
+        "validVoterIds": { "type": "array" },
+        "manualVoterIds": { "type": "array" },
+        "boysCandidates": { "type": "array" },
+        "girlsCandidates": { "type": "array" },
+        "maxBoyPicks": { "type": "number" },
+        "maxGirlPicks": { "type": "number" },
+        "openTime": { "type": "string" },
+        "closeTime": { "type": "string" },
+        "isManualOpen": { "type": "boolean" },
+        "votes": { "type": "array" },
+        "createdAt": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/settings/admin": {
+      "schema": { "$ref": "#/entities/AdminSettings" },
+      "description": "Global admin configuration document"
+    },
+    "/ballots/{ballotId}": {
+      "schema": { "$ref": "#/entities/Ballot" },
+      "description": "Election ballots collection storing candidates, learner access, and votes"
+    }
+  }
+}
