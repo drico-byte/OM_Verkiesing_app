@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Printer, Download, Copy, Check, X, FileText, CheckSquare, ShieldCheck } from 'lucide-react';
+import { Printer, Download, Copy, Check, X, FileText, CheckSquare } from 'lucide-react';
 import { Ballot } from '../../types';
 import { getStoredAdminSettings } from '../../lib/storage';
 
@@ -59,7 +59,6 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
     body { font-family: 'Segoe UI', Arial, sans-serif; margin: 40px; color: #0f172a; line-height: 1.4; }
     .header { border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
     .title { font-size: 22px; font-weight: 900; text-transform: uppercase; margin: 0; }
-    .subtitle { font-size: 14px; font-weight: bold; color: #475569; margin-top: 4px; text-transform: uppercase; }
     .info-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 20px; font-size: 13px; }
     .rules-box { background: #fffbe6; border: 1px solid #ffe58f; border-radius: 8px; padding: 12px 15px; margin-bottom: 20px; font-size: 12px; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 25px; font-size: 13px; }
@@ -72,7 +71,6 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
   <div class="header">
     <div>
       <h1 class="title">${schoolName}</h1>
-      <div class="subtitle">Amptelike Papier Stemvorm (Hardekopie Stembrief)</div>
     </div>
     <div style="text-align: right; font-size: 12px; font-family: monospace;">
       <div><strong>Stembrief:</strong> ${ballot.name}</div>
@@ -276,17 +274,13 @@ export const PrintHardcopyBallotModal: React.FC<PrintHardcopyBallotModalProps> =
           
           {/* Header Section */}
           <div className="border-b-2 border-slate-900 pb-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
+            <div className="flex items-center gap-3">
               {settings.schoolLogoUrl ? (
-                <img src={settings.schoolLogoUrl} alt={schoolName} className="h-14 object-contain mb-2" />
+                <img src={settings.schoolLogoUrl} alt={schoolName} className="h-12 w-12 object-contain shrink-0" />
               ) : null}
               <h1 className="text-2xl font-black font-serif text-slate-900 tracking-tight uppercase">
                 {schoolName}
               </h1>
-              <p className="text-xs font-extrabold text-slate-700 uppercase tracking-widest mt-0.5 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-slate-900 inline" />
-                <span>Amptelike Papier Stemvorm (Hardekopie Stembrief)</span>
-              </p>
             </div>
 
             <div className="text-left sm:text-right text-xs text-slate-700 font-mono space-y-1 bg-slate-50 p-3 rounded-lg border border-slate-200 shrink-0">
