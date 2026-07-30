@@ -3,23 +3,81 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to validate document IDs
     function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128;
+      return id is string
+        && id.size() > 0
+        && id.size() <= 128;
     }
 
-    // Admin Settings document
+    function ballotExists(ballotId) {
+      return exists(
+        /databases/$(database)/documents/ballots/$(ballotId)
+      );
+    }
+
+    function ballotData(ballotId) {
+      return get(
+        /databases/$(database)/documents/ballots/$(ballotId)
+      ).data;
+    }
+
+    function voterIsAuthorised(ballotId, voterId) {
+      return ballotExists(ballotId)
+        && (
+          (
+            ballotData(ballotId).validVoterIds is list
+            && voterId in ballotData(ballotId).validVoterIds
+          )
+          ||
+          (
+            ballotData(ballotId).manualVoterIds is list
+            && voterId in ballotData(ballotId).manualVoterIds
+          )
+        );
+    }
+
+    function selectedCandidatesAreValid(ballotId) {
+      return request.resource.data.selectedBoyIds is list
+        && request.resource.data.selectedGirlIds is list
+        && request.resource.data.selectedBoyIds.size()
+          <= ballotData(ballotId).maxBoyPicks
+        && request.resource.data.selectedGirlIds.size()
+          <= ballotData(ballotId).maxGirlPicks;
+    }
+
     match /settings/admin {
       allow read, write: if true;
     }
 
-    // Ballots collection for election management and voting
     match /ballots/{ballotId} {
       allow read: if true;
-      allow write: if isValidId(ballotId);
+
+      allow create, update, delete:
+        if isValidId(ballotId);
     }
 
-    // Default deny catch-all for any unmentioned collections
+    match /ballots/{ballotId}/votes/{voterId} {
+      allow read: if true;
+
+      allow create:
+        if isValidId(ballotId)
+        && isValidId(voterId)
+        && request.resource.data.keys().hasOnly([
+          'id',
+          'voterId',
+          'selectedBoyIds',
+          'selectedGirlIds',
+          'timestamp'
+        ])
+        && request.resource.data.id is string
+        && request.resource.data.voterId == voterId
+        && request.resource.data.timestamp is string
+        && voterIsAuthorised(ballotId, voterId)
+        && selectedCandidatesAreValid(ballotId);
+
+      allow update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

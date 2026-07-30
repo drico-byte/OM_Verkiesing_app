@@ -1,35 +1,53 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { 
-  getFirestore, 
-  collection, 
-  doc, 
-  setDoc, 
-  getDoc, 
-  getDocs,
+import {
+  collection,
   deleteDoc,
-  onSnapshot, 
-  getDocFromServer 
+  doc,
+  getDocFromServer,
+  getFirestore,
+  onSnapshot,
+  orderBy,
+  query,
+  runTransaction,
+  setDoc,
 } from 'firebase/firestore';
 import rawConfig from '../../firebase-applet-config.json';
-import { Ballot, AdminSettings } from '../types';
+import {
+  AdminSettings,
+  Ballot,
+  VoteRecord,
+} from '../types';
 
 const config = rawConfig as Record<string, string>;
 
-export const isFirebaseConfigured = Boolean(config && config.projectId && config.apiKey);
+export const isFirebaseConfigured = Boolean(
+  config &&
+    config.projectId &&
+    config.apiKey
+);
 
-// Initialize Firebase App
 const app = isFirebaseConfigured
-  ? (getApps().length === 0 ? initializeApp(config) : getApps()[0])
+  ? getApps().length === 0
+    ? initializeApp(config)
+    : getApps()[0]
   : null;
 
-// Database instance
-const dbInstance = () => {
-  if (!app) return null;
-  const dbId = config.firestoreDatabaseId || config.databaseId;
-  return dbId ? getFirestore(app, dbId) : getFirestore(app);
+const createDatabaseInstance = () => {
+  if (!app) {
+    return null;
+  }
+
+  const databaseId =
+    config.firestoreDatabaseId ||
+    config.databaseId;
+
+  return databaseId
+    ? getFirestore(app, databaseId)
+    : getFirestore(app);
 };
-export const db = dbInstance();
+
+export const db = createDatabaseInstance();
 export const auth = app ? getAuth(app) : null;
 
 enum OperationType {
@@ -51,28 +69,61 @@ interface FirestoreErrorInfo {
   };
 }
 
-let permissionErrorListeners: Array<(hasError: boolean) => void> = [];
+interface VoteSubmissionResult {
+  success: boolean;
+  reason?: string;
+}
+
+let permissionErrorListeners: Array<
+  (hasError: boolean) => void
+> = [];
+
 let hasPermissionError = false;
 
-export function subscribePermissionError(listener: (hasError: boolean) => void): () => void {
+export function subscribePermissionError(
+  listener: (hasError: boolean) => void
+): () => void {
   permissionErrorListeners.push(listener);
   listener(hasPermissionError);
+
   return () => {
-    permissionErrorListeners = permissionErrorListeners.filter((l) => l !== listener);
+    permissionErrorListeners =
+      permissionErrorListeners.filter(
+        (currentListener) =>
+          currentListener !== listener
+      );
   };
 }
 
 function notifyPermissionError(error: unknown) {
-  const msg = error instanceof Error ? error.message : String(error);
-  if (msg.includes('permissions') || msg.includes('PERMISSION_DENIED')) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : String(error);
+
+  if (
+    message.includes('permissions') ||
+    message.includes('PERMISSION_DENIED') ||
+    message.includes('permission-denied')
+  ) {
     hasPermissionError = true;
-    permissionErrorListeners.forEach((l) => l(true));
+
+    permissionErrorListeners.forEach((listener) => {
+      listener(true);
+    });
   }
 }
 
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+function handleFirestoreError(
+  error: unknown,
+  operationType: OperationType,
+  path: string | null
+) {
+  const errorInformation: FirestoreErrorInfo = {
+    error:
+      error instanceof Error
+        ? error.message
+        : String(error),
     authInfo: {
       userId: auth?.currentUser?.uid,
       email: auth?.currentUser?.email,
@@ -80,80 +131,137 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
     operationType,
     path,
   };
-  console.warn('Firestore Operation Error:', errInfo);
+
+  console.warn(
+    'Firestore Operation Error:',
+    errorInformation
+  );
+
   notifyPermissionError(error);
 }
 
-// Connection test on init
 async function testConnection() {
-  if (!db) return;
+  if (!db) {
+    return;
+  }
+
   try {
-    await getDocFromServer(doc(db, 'settings', 'admin'));
+    await getDocFromServer(
+      doc(db, 'settings', 'admin')
+    );
   } catch (error) {
     notifyPermissionError(error);
   }
 }
+
 if (isFirebaseConfigured) {
   testConnection();
 }
 
-// Subscribe to Admin Settings in real-time
+function sanitizeForFirestore<T>(data: T): T {
+  return JSON.parse(JSON.stringify(data)) as T;
+}
+
 export function subscribeAdminSettings(
-  onUpdate: (settings: AdminSettings | null) => void,
-  onError?: (err: unknown) => void
+  onUpdate: (
+    settings: AdminSettings | null
+  ) => void,
+  onError?: (error: unknown) => void
 ): () => void {
-  if (!db) return () => {};
-  const docRef = doc(db, 'settings', 'admin');
+  if (!db) {
+    return () => {};
+  }
+
+  const documentReference = doc(
+    db,
+    'settings',
+    'admin'
+  );
+
   return onSnapshot(
-    docRef,
+    documentReference,
     (snapshot) => {
       if (snapshot.exists()) {
-        onUpdate(snapshot.data() as AdminSettings);
+        onUpdate(
+          snapshot.data() as AdminSettings
+        );
       } else {
         onUpdate(null);
       }
     },
     (error) => {
-      handleFirestoreError(error, OperationType.GET, 'settings/admin');
+      handleFirestoreError(
+        error,
+        OperationType.GET,
+        'settings/admin'
+      );
+
       onError?.(error);
     }
   );
 }
 
-// Helper to remove undefined fields before sending to Firestore
-function sanitizeForFirestore<T>(data: T): T {
-  return JSON.parse(JSON.stringify(data));
-}
+export async function saveAdminSettingsCloud(
+  settings: AdminSettings
+): Promise<boolean> {
+  if (!db) {
+    return false;
+  }
 
-// Save Admin Settings to Firestore
-export async function saveAdminSettingsCloud(settings: AdminSettings): Promise<boolean> {
-  if (!db) return false;
   const path = 'settings/admin';
+
   try {
-    const cleanData = sanitizeForFirestore(settings);
-    await setDoc(doc(db, 'settings', 'admin'), cleanData, { merge: true });
+    const cleanSettings =
+      sanitizeForFirestore(settings);
+
+    await setDoc(
+      doc(db, 'settings', 'admin'),
+      cleanSettings,
+      {
+        merge: true,
+      }
+    );
+
     return true;
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    handleFirestoreError(
+      error,
+      OperationType.WRITE,
+      path
+    );
+
     return false;
   }
 }
 
-// Subscribe to Ballots in real-time
 export function subscribeBallots(
   onUpdate: (ballots: Ballot[]) => void,
-  onError?: (err: unknown) => void
+  onError?: (error: unknown) => void
 ): () => void {
-  if (!db) return () => {};
-  const colRef = collection(db, 'ballots');
+  if (!db) {
+    return () => {};
+  }
+
+  const collectionReference = collection(
+    db,
+    'ballots'
+  );
+
   return onSnapshot(
-    colRef,
+    collectionReference,
     (snapshot) => {
       const ballots: Ballot[] = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        ballots.push({
-          id: docSnap.id,
+
+      snapshot.forEach((documentSnapshot) => {
+        const data = documentSnapshot.data();
+
+        /*
+         * Votes are intentionally not read from the main ballot document.
+         * They are loaded from:
+         * ballots/{ballotId}/votes/{voterId}
+         */
+        const ballot: Ballot = {
+          id: documentSnapshot.id,
           name: '',
           accessCode: '',
           welcomeMessage: '',
@@ -167,56 +275,261 @@ export function subscribeBallots(
           openTime: new Date().toISOString(),
           closeTime: new Date().toISOString(),
           isManualOpen: true,
-          votes: [],
           createdAt: new Date().toISOString(),
           ...data,
-        } as Ballot);
+          votes: [],
+        } as Ballot;
+
+        ballots.push(ballot);
       });
+
       onUpdate(ballots);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'ballots');
+      handleFirestoreError(
+        error,
+        OperationType.LIST,
+        'ballots'
+      );
+
       onError?.(error);
     }
   );
 }
 
-// Save a single Ballot to Firestore
-export async function saveBallotCloud(ballot: Ballot): Promise<boolean> {
-  if (!db) return false;
+export async function saveBallotCloud(
+  ballot: Ballot
+): Promise<boolean> {
+  if (!db) {
+    return false;
+  }
+
   const path = `ballots/${ballot.id}`;
+
   try {
-    const cleanData = sanitizeForFirestore(ballot);
-    await setDoc(doc(db, 'ballots', ballot.id), cleanData);
+    /*
+     * The votes property only exists in React state for display purposes.
+     * Individual votes are stored as separate subcollection documents.
+     */
+    const {
+      votes: _votes,
+      ...ballotWithoutVotes
+    } = ballot;
+
+    const cleanBallot =
+      sanitizeForFirestore(ballotWithoutVotes);
+
+    /*
+     * We replace the main ballot document so that an old legacy
+     * "votes" array is removed from it automatically.
+     */
+    await setDoc(
+      doc(db, 'ballots', ballot.id),
+      cleanBallot
+    );
+
     return true;
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    handleFirestoreError(
+      error,
+      OperationType.WRITE,
+      path
+    );
+
     return false;
   }
 }
 
-// Save all Ballots to Firestore batch
-export async function saveBallotsCloud(ballots: Ballot[]): Promise<boolean> {
-  if (!db) return false;
+export async function saveBallotsCloud(
+  ballots: Ballot[]
+): Promise<boolean> {
+  if (!db) {
+    return false;
+  }
+
   try {
-    const results = await Promise.all(ballots.map((b) => saveBallotCloud(b)));
+    const results = await Promise.all(
+      ballots.map((ballot) =>
+        saveBallotCloud(ballot)
+      )
+    );
+
     return results.every(Boolean);
   } catch (error) {
-    console.warn('Error saving ballots to cloud:', error);
+    console.warn(
+      'Error saving ballots to cloud:',
+      error
+    );
+
     return false;
   }
 }
 
-// Delete a single Ballot from Firestore
-export async function deleteBallotCloud(ballotId: string): Promise<boolean> {
-  if (!db) return false;
+export async function deleteBallotCloud(
+  ballotId: string
+): Promise<boolean> {
+  if (!db) {
+    return false;
+  }
+
   const path = `ballots/${ballotId}`;
+
   try {
-    await deleteDoc(doc(db, 'ballots', ballotId));
+    /*
+     * Note:
+     * Firestore does not automatically delete subcollections.
+     * For the current app, test votes should be cleared separately
+     * before deleting a ballot that contains vote documents.
+     */
+    await deleteDoc(
+      doc(db, 'ballots', ballotId)
+    );
+
     return true;
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, path);
+    handleFirestoreError(
+      error,
+      OperationType.DELETE,
+      path
+    );
+
     return false;
   }
 }
 
+export async function submitVoteCloud(
+  ballotId: string,
+  vote: VoteRecord
+): Promise<VoteSubmissionResult> {
+  if (!db) {
+    return {
+      success: false,
+      reason:
+        'Firebase is nie gekonfigureer nie.',
+    };
+  }
+
+  const cleanBallotId = ballotId.trim();
+  const cleanVoterId = vote.voterId.trim();
+
+  if (!cleanBallotId || !cleanVoterId) {
+    return {
+      success: false,
+      reason:
+        'Die stembrief- of leerder-ID is ongeldig.',
+    };
+  }
+
+  const voteReference = doc(
+    db,
+    'ballots',
+    cleanBallotId,
+    'votes',
+    cleanVoterId
+  );
+
+  try {
+    await runTransaction(
+      db,
+      async (transaction) => {
+        const existingVote =
+          await transaction.get(voteReference);
+
+        if (existingVote.exists()) {
+          throw new Error('ALREADY_VOTED');
+        }
+
+        const cleanVote =
+          sanitizeForFirestore({
+            ...vote,
+            voterId: cleanVoterId,
+          });
+
+        transaction.set(
+          voteReference,
+          cleanVote
+        );
+      }
+    );
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === 'ALREADY_VOTED'
+    ) {
+      return {
+        success: false,
+        reason:
+          'Hierdie leerder het reeds gestem.',
+      };
+    }
+
+    handleFirestoreError(
+      error,
+      OperationType.WRITE,
+      `ballots/${cleanBallotId}/votes/${cleanVoterId}`
+    );
+
+    return {
+      success: false,
+      reason:
+        'Die stem kon nie gestoor word nie. Probeer asseblief weer.',
+    };
+  }
+}
+
+export function subscribeVotes(
+  ballotId: string,
+  onUpdate: (votes: VoteRecord[]) => void,
+  onError?: (error: unknown) => void
+): () => void {
+  if (!db) {
+    return () => {};
+  }
+
+  const votesCollectionReference =
+    collection(
+      db,
+      'ballots',
+      ballotId,
+      'votes'
+    );
+
+  const votesQuery = query(
+    votesCollectionReference,
+    orderBy('timestamp', 'desc')
+  );
+
+  return onSnapshot(
+    votesQuery,
+    (snapshot) => {
+      const votes = snapshot.docs.map(
+        (voteDocument) => {
+          const data =
+            voteDocument.data() as VoteRecord;
+
+          return {
+            ...data,
+            voterId:
+              data.voterId ||
+              voteDocument.id,
+          };
+        }
+      );
+
+      onUpdate(votes);
+    },
+    (error) => {
+      handleFirestoreError(
+        error,
+        OperationType.LIST,
+        `ballots/${ballotId}/votes`
+      );
+
+      onError?.(error);
+    }
+  );
+}

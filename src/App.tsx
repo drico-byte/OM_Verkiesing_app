@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AdminSettings, Ballot, ViewMode, VoteRecord } from './types';
 import {
   getStoredAdminSettings,
@@ -20,6 +20,8 @@ import {
   saveBallotsCloud,
   deleteBallotCloud,
   subscribePermissionError,
+  submitVoteCloud,
+  subscribeVotes,
 } from './lib/firebase';
 import { Header } from './components/Header';
 import { AppLanding } from './components/AppLanding';
@@ -29,68 +31,114 @@ import { LearnerBallotLanding } from './components/learner/LearnerBallotLanding'
 import { LearnerVotingFlow } from './components/learner/LearnerVotingFlow';
 
 export default function App() {
-  const [adminSettings, setAdminSettings] = useState<AdminSettings>(() => getStoredAdminSettings());
+  const [adminSettings, setAdminSettings] = useState<AdminSettings>(() =>
+    getStoredAdminSettings()
+  );
+
   const [ballots, setBallots] = useState<Ballot[]>(() => {
     const stored = getStoredBallots();
-    return stored.filter((b) => b.id !== 'ballot_vrl_2026' && b.id !== 'ballot_klas_11a');
+
+    return stored.filter(
+      (ballot) =>
+        ballot.id !== 'ballot_vrl_2026' &&
+        ballot.id !== 'ballot_klas_11a'
+    );
   });
-  const [viewMode, setViewMode] = useState<ViewMode>({ type: 'app_landing' });
+
+  const [viewMode, setViewMode] = useState<ViewMode>({
+    type: 'app_landing',
+  });
+
   const [firebaseRulesError, setFirebaseRulesError] = useState(false);
 
   useEffect(() => {
-    const unsubPerm = subscribePermissionError((hasError) => {
-      setFirebaseRulesError(hasError);
-    });
-    return () => unsubPerm();
+    const unsubscribePermissionError = subscribePermissionError(
+      (hasError) => {
+        setFirebaseRulesError(hasError);
+      }
+    );
+
+    return () => {
+      unsubscribePermissionError();
+    };
   }, []);
 
-  // Subscribe to Firebase Firestore real-time updates
+  // Subscribe to the admin settings and the main ballot documents.
   useEffect(() => {
-    // 1. Admin Settings subscription
     const unsubscribeSettings = subscribeAdminSettings((cloudSettings) => {
       if (cloudSettings) {
         setAdminSettings(cloudSettings);
         saveAdminSettings(cloudSettings);
-      } else {
-        // Seed default settings to Firestore if empty
-        const initial = getStoredAdminSettings();
-        saveAdminSettingsCloud(initial).catch(console.error);
+        return;
       }
+
+      const initialSettings = getStoredAdminSettings();
+
+      saveAdminSettingsCloud(initialSettings).catch(console.error);
     });
 
-    // 2. Ballots subscription
     const unsubscribeBallots = subscribeBallots(
       (cloudBallots) => {
         const mockIds = ['ballot_vrl_2026', 'ballot_klas_11a'];
-        if (cloudBallots && cloudBallots.length > 0) {
-          // Auto-purge any initial mock ballots from Firestore
-          cloudBallots.forEach((b) => {
-            if (mockIds.includes(b.id)) {
-              deleteBallotCloud(b.id).catch(console.error);
+
+        if (cloudBallots.length > 0) {
+          cloudBallots.forEach((ballot) => {
+            if (mockIds.includes(ballot.id)) {
+              deleteBallotCloud(ballot.id).catch(console.error);
             }
           });
 
-          const realBallots = cloudBallots.filter((b) => !mockIds.includes(b.id));
-
-          // Sort ballots by createdAt descending
-          const sorted = [...realBallots].sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          const realBallots = cloudBallots.filter(
+            (ballot) => !mockIds.includes(ballot.id)
           );
-          setBallots(sorted);
-          saveBallots(sorted);
-        } else {
-          // If cloud is empty, keep and sync existing local ballots
-          const localBallots = getStoredBallots().filter((b) => !mockIds.includes(b.id));
-          if (localBallots.length > 0) {
-            setBallots(localBallots);
-            saveBallotsCloud(localBallots).catch(console.error);
-          }
+
+          const sortedBallots = [...realBallots].sort(
+            (firstBallot, secondBallot) =>
+              new Date(secondBallot.createdAt).getTime() -
+              new Date(firstBallot.createdAt).getTime()
+          );
+
+          /*
+           * Preserve votes already loaded from the votes subcollections.
+           * The main ballot subscription should not erase them every time
+           * an administrator changes a ballot setting.
+           */
+          setBallots((currentBallots) => {
+            const nextBallots = sortedBallots.map((cloudBallot) => {
+              const currentBallot = currentBallots.find(
+                (ballot) => ballot.id === cloudBallot.id
+              );
+
+              return {
+                ...cloudBallot,
+                votes: currentBallot?.votes ?? [],
+              };
+            });
+
+            saveBallots(nextBallots);
+
+            return nextBallots;
+          });
+
+          return;
+        }
+
+        const localBallots = getStoredBallots().filter(
+          (ballot) => !mockIds.includes(ballot.id)
+        );
+
+        if (localBallots.length > 0) {
+          setBallots(localBallots);
+          saveBallotsCloud(localBallots).catch(console.error);
         }
       },
       () => {
-        // On error (e.g., missing permissions), preserve local storage ballots
         const mockIds = ['ballot_vrl_2026', 'ballot_klas_11a'];
-        const localBallots = getStoredBallots().filter((b) => !mockIds.includes(b.id));
+
+        const localBallots = getStoredBallots().filter(
+          (ballot) => !mockIds.includes(ballot.id)
+        );
+
         if (localBallots.length > 0) {
           setBallots(localBallots);
         }
@@ -103,102 +151,199 @@ export default function App() {
     };
   }, []);
 
-  // Sync state changes to storage & cloud
+  /*
+   * Subscribe separately to every ballot's votes subcollection.
+   * Each learner vote is stored in its own Firestore document.
+   */
+  const ballotIds = ballots
+    .map((ballot) => ballot.id)
+    .sort()
+    .join('|');
+
+  useEffect(() => {
+    if (!ballotIds) {
+      return;
+    }
+
+    const ids = ballotIds.split('|');
+
+    const unsubscribeFunctions = ids.map((ballotId) =>
+      subscribeVotes(ballotId, (votes) => {
+        setBallots((currentBallots) => {
+          const updatedBallots = currentBallots.map((ballot) =>
+            ballot.id === ballotId
+              ? {
+                  ...ballot,
+                  votes,
+                }
+              : ballot
+          );
+
+          saveBallots(updatedBallots);
+
+          return updatedBallots;
+        });
+      })
+    );
+
+    return () => {
+      unsubscribeFunctions.forEach((unsubscribe) => {
+        unsubscribe();
+      });
+    };
+  }, [ballotIds]);
+
   const handleUpdateAdminSettings = (newSettings: AdminSettings) => {
     setAdminSettings(newSettings);
     saveAdminSettings(newSettings);
+
     saveAdminSettingsCloud(newSettings).catch(console.error);
   };
 
   const handleUpdateBallots = (newBallots: Ballot[]) => {
     setBallots(newBallots);
     saveBallots(newBallots);
+
     saveBallotsCloud(newBallots).catch(console.error);
   };
 
   const handleUpdateSingleBallot = (updatedBallot: Ballot) => {
-    const updated = ballots.map((b) => (b.id === updatedBallot.id ? updatedBallot : b));
-    setBallots(updated);
-    saveBallots(updated);
+    const updatedBallots = ballots.map((ballot) =>
+      ballot.id === updatedBallot.id ? updatedBallot : ballot
+    );
+
+    setBallots(updatedBallots);
+    saveBallots(updatedBallots);
+
     saveBallotCloud(updatedBallot).catch(console.error);
   };
 
   const handleCreateBallot = (name: string, accessCode: string) => {
     const newBallot: Ballot = {
-      id: 'ballot_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      id:
+        'ballot_' +
+        Date.now() +
+        '_' +
+        Math.random().toString(36).substring(2, 6),
       name,
       accessCode,
       welcomeMessage: `Welkom by die ${name} verkiesing stembrief. Voer asseblief jou skool ID in om te stem.`,
+      thankYouMessage: 'Dankie. Jou stem is suksesvol ingedien.',
       validVoterIds: [],
+      manualVoterIds: [],
       boysCandidates: [],
       girlsCandidates: [],
       maxBoyPicks: 15,
       maxGirlPicks: 15,
       openTime: new Date().toISOString(),
-      closeTime: new Date(Date.now() + 3600 * 1000 * 72).toISOString(), // 3 days
+      closeTime: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
       isManualOpen: true,
       votes: [],
       createdAt: new Date().toISOString(),
     };
 
     const nextBallots = [newBallot, ...ballots];
+
     setBallots(nextBallots);
     saveBallots(nextBallots);
+
     saveBallotCloud(newBallot).catch(console.error);
-    setViewMode({ type: 'admin_ballot_detail', ballotId: newBallot.id });
+
+    setViewMode({
+      type: 'admin_ballot_detail',
+      ballotId: newBallot.id,
+    });
   };
 
   const handleDeleteBallot = (ballotId: string) => {
-    const filtered = ballots.filter((b) => b.id !== ballotId);
-    setBallots(filtered);
-    saveBallots(filtered);
+    const filteredBallots = ballots.filter(
+      (ballot) => ballot.id !== ballotId
+    );
+
+    setBallots(filteredBallots);
+    saveBallots(filteredBallots);
+
     deleteBallotCloud(ballotId).catch(console.error);
   };
 
-  const handleToggleManualOpen = (ballotId: string, isOpen: boolean) => {
-    const updated = ballots.map((b) => (b.id === ballotId ? { ...b, isManualOpen: isOpen } : b));
-    handleUpdateBallots(updated);
+  const handleToggleManualOpen = (
+    ballotId: string,
+    isOpen: boolean
+  ) => {
+    const updatedBallots = ballots.map((ballot) =>
+      ballot.id === ballotId
+        ? {
+            ...ballot,
+            isManualOpen: isOpen,
+          }
+        : ballot
+    );
+
+    handleUpdateBallots(updatedBallots);
   };
 
   const handleResetDefaults = () => {
     resetToDefaults();
+
     setAdminSettings(getStoredAdminSettings());
     setBallots(getStoredBallots());
-    setViewMode({ type: 'admin_landing' });
+
+    setViewMode({
+      type: 'admin_landing',
+    });
   };
 
-  // Submit learner vote
-  const handleSubmitLearnerVote = (
+  const handleSubmitLearnerVote = async (
     ballotId: string,
     voterId: string,
     selectedBoyIds: string[],
     selectedGirlIds: string[]
-  ) => {
-    const targetBallot = ballots.find((b) => b.id === ballotId);
-    if (!targetBallot) return;
+  ): Promise<void> => {
+    const targetBallot = ballots.find(
+      (ballot) => ballot.id === ballotId
+    );
+
+    if (!targetBallot) {
+      throw new Error('Die stembrief kon nie gevind word nie.');
+    }
+
+    const cleanVoterId = voterId.trim();
+
+    if (!cleanVoterId) {
+      throw new Error('Die leerder-ID is ongeldig.');
+    }
 
     const newVoteRecord: VoteRecord = {
-      id: 'vote_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-      voterId,
+      id:
+        'vote_' +
+        Date.now() +
+        '_' +
+        Math.random().toString(36).substring(2, 6),
+      voterId: cleanVoterId,
       selectedBoyIds,
       selectedGirlIds,
       timestamp: new Date().toISOString(),
     };
 
-    const updatedBallot: Ballot = {
-      ...targetBallot,
-      votes: [newVoteRecord, ...targetBallot.votes],
-    };
+    const result = await submitVoteCloud(
+      ballotId,
+      newVoteRecord
+    );
 
-    handleUpdateSingleBallot(updatedBallot);
+    if (!result.success) {
+      throw new Error(
+        result.reason || 'Die stem kon nie gestoor word nie.'
+      );
+    }
   };
 
-  // Helper to get ballot for current detail/learner view
   const currentBallot =
     viewMode.type === 'admin_ballot_detail' ||
     viewMode.type === 'learner_ballot_landing' ||
     viewMode.type === 'learner_voting'
-      ? ballots.find((b) => b.id === viewMode.ballotId)
+      ? ballots.find(
+          (ballot) => ballot.id === viewMode.ballotId
+        )
       : null;
 
   return (
@@ -206,10 +351,15 @@ export default function App() {
       {firebaseRulesError && (
         <div className="bg-amber-900/90 text-amber-100 text-xs px-4 py-3 flex items-center justify-between gap-3 shadow-md border-b border-amber-700">
           <div className="flex items-start md:items-center gap-2">
-            <span className="font-bold text-amber-300 shrink-0">⚠️ Firestore Security Rules Notice:</span>
+            <span className="font-bold text-amber-300 shrink-0">
+              ⚠️ Firestore Security Rules Notice:
+            </span>
+
             <span>
-              Your Firebase Console project (<code>om-verkiesings</code>) has rules set to private.
-              Your ballots are stored locally in your browser. To enable live database sync, go to your{' '}
+              Your Firebase Console project (
+              <code>om-verkiesings</code>) has rules set to private.
+              Your ballots are stored locally in your browser. To
+              enable live database sync, go to your{' '}
               <a
                 href="https://console.firebase.google.com/"
                 target="_blank"
@@ -218,9 +368,12 @@ export default function App() {
               >
                 Firebase Console
               </a>{' '}
-              &rarr; <strong>Firestore Database</strong> &rarr; <strong>Rules</strong> tab and change rules to allow read/write.
+              &rarr; <strong>Firestore Database</strong> &rarr;{' '}
+              <strong>Rules</strong> tab and publish the required
+              rules.
             </span>
           </div>
+
           <button
             onClick={() => setFirebaseRulesError(false)}
             className="text-amber-200 hover:text-white text-xs px-2.5 py-1 rounded bg-amber-800/80 hover:bg-amber-800 shrink-0 transition-colors font-medium"
@@ -230,23 +383,36 @@ export default function App() {
         </div>
       )}
 
-      {/* Global Application Header */}
       <Header
         adminSettings={adminSettings}
         viewMode={viewMode}
-        onNavigateHome={() => setViewMode({ type: 'app_landing' })}
-        onNavigateAdminHome={() => setViewMode({ type: 'admin_landing' })}
+        onNavigateHome={() =>
+          setViewMode({
+            type: 'app_landing',
+          })
+        }
+        onNavigateAdminHome={() =>
+          setViewMode({
+            type: 'admin_landing',
+          })
+        }
       />
 
-      {/* Main Content Area */}
       <main className="flex-1">
         {viewMode.type === 'app_landing' && (
           <AppLanding
             adminSettings={adminSettings}
             ballots={ballots}
-            onAdminLogin={() => setViewMode({ type: 'admin_landing' })}
+            onAdminLogin={() =>
+              setViewMode({
+                type: 'admin_landing',
+              })
+            }
             onEnterLearnerBallot={(ballotId) =>
-              setViewMode({ type: 'learner_ballot_landing', ballotId })
+              setViewMode({
+                type: 'learner_ballot_landing',
+                ballotId,
+              })
             }
           />
         )}
@@ -260,52 +426,70 @@ export default function App() {
             onDeleteBallot={handleDeleteBallot}
             onToggleManualOpen={handleToggleManualOpen}
             onSelectBallot={(ballotId) =>
-              setViewMode({ type: 'admin_ballot_detail', ballotId })
+              setViewMode({
+                type: 'admin_ballot_detail',
+                ballotId,
+              })
             }
             onResetDefaults={handleResetDefaults}
           />
         )}
 
-        {viewMode.type === 'admin_ballot_detail' && currentBallot && (
-          <BallotDetail
-            ballot={currentBallot}
-            onBack={() => setViewMode({ type: 'admin_landing' })}
-            onUpdateBallot={handleUpdateSingleBallot}
-            onToggleManualOpen={handleToggleManualOpen}
-          />
-        )}
+        {viewMode.type === 'admin_ballot_detail' &&
+          currentBallot && (
+            <BallotDetail
+              ballot={currentBallot}
+              onBack={() =>
+                setViewMode({
+                  type: 'admin_landing',
+                })
+              }
+              onUpdateBallot={handleUpdateSingleBallot}
+              onToggleManualOpen={handleToggleManualOpen}
+            />
+          )}
 
-        {viewMode.type === 'learner_ballot_landing' && currentBallot && (
-          <LearnerBallotLanding
-            adminSettings={adminSettings}
-            ballot={currentBallot}
-            onValidIdSubmitted={(voterId) =>
-              setViewMode({
-                type: 'learner_voting',
-                ballotId: currentBallot.id,
-                voterId,
-              })
-            }
-            onCancel={() => setViewMode({ type: 'app_landing' })}
-          />
-        )}
+        {viewMode.type === 'learner_ballot_landing' &&
+          currentBallot && (
+            <LearnerBallotLanding
+              adminSettings={adminSettings}
+              ballot={currentBallot}
+              onValidIdSubmitted={(voterId) =>
+                setViewMode({
+                  type: 'learner_voting',
+                  ballotId: currentBallot.id,
+                  voterId,
+                })
+              }
+              onCancel={() =>
+                setViewMode({
+                  type: 'app_landing',
+                })
+              }
+            />
+          )}
 
-        {viewMode.type === 'learner_voting' && currentBallot && (
-          <LearnerVotingFlow
-            adminSettings={adminSettings}
-            ballot={currentBallot}
-            voterId={viewMode.voterId}
-            onSubmitVote={(selectedBoyIds, selectedGirlIds) =>
-              handleSubmitLearnerVote(
-                currentBallot.id,
-                viewMode.voterId,
-                selectedBoyIds,
-                selectedGirlIds
-              )
-            }
-            onFinishAndHome={() => setViewMode({ type: 'app_landing' })}
-          />
-        )}
+        {viewMode.type === 'learner_voting' &&
+          currentBallot && (
+            <LearnerVotingFlow
+              adminSettings={adminSettings}
+              ballot={currentBallot}
+              voterId={viewMode.voterId}
+              onSubmitVote={(selectedBoyIds, selectedGirlIds) =>
+                handleSubmitLearnerVote(
+                  currentBallot.id,
+                  viewMode.voterId,
+                  selectedBoyIds,
+                  selectedGirlIds
+                )
+              }
+              onFinishAndHome={() =>
+                setViewMode({
+                  type: 'app_landing',
+                })
+              }
+            />
+          )}
       </main>
     </div>
   );
