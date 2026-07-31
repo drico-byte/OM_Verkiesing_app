@@ -264,7 +264,6 @@ export function subscribeBallots(
           id: documentSnapshot.id,
           name: '',
           accessCode: '',
-          welcomeMessage: '',
           thankYouMessage: '',
           validVoterIds: [],
           manualVoterIds: [],

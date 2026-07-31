@@ -13,7 +13,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 }) => {
   const [name, setName] = useState(ballot.name);
   const [accessCode, setAccessCode] = useState(ballot.accessCode);
-  const [welcomeMessage, setWelcomeMessage] = useState(ballot.welcomeMessage);
   const [maxBoyPicks, setMaxBoyPicks] = useState(ballot.maxBoyPicks === 0 ? 15 : ballot.maxBoyPicks);
   const [maxGirlPicks, setMaxGirlPicks] = useState(ballot.maxGirlPicks === 0 ? 15 : ballot.maxGirlPicks);
   const [isBoyUnlimited, setIsBoyUnlimited] = useState(ballot.maxBoyPicks === 0);
@@ -46,7 +45,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       ...ballot,
       name: name.trim() || ballot.name,
       accessCode: accessCode.trim().toUpperCase() || ballot.accessCode,
-      welcomeMessage: welcomeMessage.trim(),
       maxBoyPicks: finalMaxBoy,
       maxGirlPicks: finalMaxGirl,
       openTime: new Date(openTimeInput).toISOString(),
@@ -232,20 +230,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               className="mt-1.5 block w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white font-mono"
             />
           </div>
-        </div>
-
-        {/* Custom Messages */}
-        <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-            Stembrief Welkomboodskap (Op die Stembrief Ingangsbladsy)
-          </label>
-          <textarea
-            rows={3}
-            value={welcomeMessage}
-            onChange={(e) => setWelcomeMessage(e.target.value)}
-            className="mt-1.5 block w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white"
-            placeholder="Welkom by die verkiesing..."
-          />
         </div>
 
         <div className="pt-4 border-t border-slate-200">

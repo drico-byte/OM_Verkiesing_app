@@ -57,7 +57,6 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
   // Admin settings edit state
   const [editSchoolName, setEditSchoolName] = useState(adminSettings.schoolName);
   const [editAdminPassword, setEditAdminPassword] = useState(adminSettings.adminPassword);
-  const [editWelcomeMessage, setEditWelcomeMessage] = useState(adminSettings.welcomeMessage);
   const [logoPreview, setLogoPreview] = useState<string | null>(adminSettings.schoolLogoUrl);
   const [isCompressingLogo, setIsCompressingLogo] = useState(false);
   const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
@@ -69,7 +68,6 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
   useEffect(() => {
     setEditSchoolName(adminSettings.schoolName);
     setEditAdminPassword(adminSettings.adminPassword);
-    setEditWelcomeMessage(adminSettings.welcomeMessage);
     setLogoPreview(adminSettings.schoolLogoUrl);
   }, [adminSettings]);
 
@@ -138,7 +136,6 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
     e.preventDefault();
     onSaveAdminSettings({
       adminPassword: editAdminPassword.trim() || 'OMAdmin123!',
-      welcomeMessage: editWelcomeMessage.trim(),
       schoolLogoUrl: logoPreview,
       schoolName: editSchoolName.trim(),
     });
@@ -371,19 +368,6 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
                   Hierdie wagwoord word in die toelatingskode-teksboks ingesleutel vir admin-toegang.
                 </p>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Hoof Welkomboodskap op Beginblad
-              </label>
-              <textarea
-                rows={3}
-                value={editWelcomeMessage}
-                onChange={(e) => setEditWelcomeMessage(e.target.value)}
-                className="mt-2 block w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white"
-                placeholder="Skryf 'n boodskap wat op die eerste bladsy vir leerders wys..."
-              />
             </div>
 
             {/* Logo Upload Section */}

@@ -227,7 +227,6 @@ export default function App() {
         Math.random().toString(36).substring(2, 6),
       name,
       accessCode,
-      welcomeMessage: `Welkom by die ${name} verkiesing stembrief. Voer asseblief jou skool ID in om te stem.`,
       thankYouMessage: 'Dankie. Jou stem is suksesvol ingedien.',
       validVoterIds: [],
       manualVoterIds: [],

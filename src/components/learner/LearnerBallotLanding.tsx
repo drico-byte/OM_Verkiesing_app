@@ -72,11 +72,6 @@ export const LearnerBallotLanding: React.FC<LearnerBallotLandingProps> = ({
           <h1 className="mt-3 text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
             {ballot.name}
           </h1>
-
-          <div className="mt-2 bg-slate-100 border border-slate-200 rounded-xl p-3 text-slate-700 text-xs sm:text-sm leading-relaxed shadow-xs">
-            {ballot.welcomeMessage ||
-              'Welkom by die verkiesings stembrief. Voer jou skool Leerder ID in om jou stemming te begin.'}
-          </div>
         </div>
 
         {/* Input Form Card */}

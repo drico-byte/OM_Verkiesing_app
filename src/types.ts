@@ -20,7 +20,6 @@ export interface Ballot {
   id: string;
   name: string;
   accessCode: string; // toelatingskode (case-insensitive search)
-  welcomeMessage: string;
   validVoterIds: string[];
   manualVoterIds?: string[]; // Voter IDs added manually by admin
   boysCandidates: Candidate[];
@@ -36,7 +35,6 @@ export interface Ballot {
 
 export interface AdminSettings {
   adminPassword: string;
-  welcomeMessage: string;
   schoolLogoUrl: string | null;
   schoolName: string;
 }
