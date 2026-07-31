@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  Settings, 
-  Vote, 
-  Users, 
-  Key, 
-  Lock, 
-  Upload, 
-  Trash2, 
-  ChevronRight, 
-  CheckCircle2, 
-  Clock, 
+import QRCode from 'qrcode';
+import {
+  Plus,
+  Settings,
+  Vote,
+  Users,
+  Key,
+  Lock,
+  Upload,
+  Trash2,
+  ChevronRight,
+  CheckCircle2,
+  Clock,
   Building2,
   Sparkles,
   RefreshCw,
   Image as ImageIcon,
-  Loader2
+  Loader2,
+  QrCode,
+  Download
 } from 'lucide-react';
 import { AdminSettings, Ballot } from '../../types';
 import { compressAndResizeImage } from '../../lib/imageUtils';
@@ -59,12 +62,37 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
   const [isCompressingLogo, setIsCompressingLogo] = useState(false);
   const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
 
+  // QR code for easy learner access to the app
+  const appUrl = window.location.origin;
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
+
   useEffect(() => {
     setEditSchoolName(adminSettings.schoolName);
     setEditAdminPassword(adminSettings.adminPassword);
     setEditWelcomeMessage(adminSettings.welcomeMessage);
     setLogoPreview(adminSettings.schoolLogoUrl);
   }, [adminSettings]);
+
+  useEffect(() => {
+    QRCode.toDataURL(appUrl, {
+      width: 320,
+      margin: 1,
+      color: { dark: '#0f172a', light: '#ffffff' },
+    })
+      .then(setQrCodeDataUrl)
+      .catch((err) => console.error('Kon nie QR-kode genereer nie:', err));
+  }, [appUrl]);
+
+  const handleDownloadQrCode = () => {
+    if (!qrCodeDataUrl) return;
+
+    const link = document.createElement('a');
+    link.href = qrCodeDataUrl;
+    link.download = 'skool_verkiesings_qr_kode.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -293,7 +321,8 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
 
       {/* TAB 2: SYSTEM SETTINGS */}
       {activeSubTab === 'settings' && (
-        <div className="bg-white rounded-xl border border-slate-200/90 shadow-sm p-6 sm:p-8 max-w-3xl space-y-8">
+        <div className="max-w-3xl space-y-6">
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-sm p-6 sm:p-8 space-y-8">
           <div>
             <h2 className="text-xl font-bold text-slate-900">Algemene Stelsel- & Skoolinstellings</h2>
             <p className="text-xs text-slate-500 mt-1">
@@ -423,6 +452,47 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
               </button>
             </div>
           </form>
+        </div>
+
+        {/* QR Code for Easy Learner Access */}
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-sm p-6 sm:p-8 space-y-5">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-slate-700" />
+              Toegang QR-kode
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Wys hierdie QR-kode op die projektor sodat leerders dit met hul selfoon kan skandeer om direk na die stemstelsel se toegangsbladsy te gaan.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div className="w-40 h-40 rounded-xl bg-white border border-slate-300 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+              {qrCodeDataUrl ? (
+                <img src={qrCodeDataUrl} alt="QR-kode vir toegang tot die stemstelsel" className="w-full h-full object-contain p-2" />
+              ) : (
+                <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+              )}
+            </div>
+
+            <div className="space-y-3 flex-1 text-center sm:text-left">
+              <div>
+                <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Skakel</span>
+                <span className="text-sm font-mono text-slate-900 break-all">{appUrl}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleDownloadQrCode}
+                disabled={!qrCodeDataUrl}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 disabled:pointer-events-none text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>Laai QR-kode af (PNG)</span>
+              </button>
+            </div>
+          </div>
+        </div>
         </div>
       )}
 
