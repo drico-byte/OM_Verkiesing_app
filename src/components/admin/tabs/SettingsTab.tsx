@@ -44,7 +44,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     const updatedBallot: Ballot = {
       ...ballot,
       name: name.trim() || ballot.name,
-      accessCode: accessCode.trim().toUpperCase() || ballot.accessCode,
+      accessCode: accessCode.trim() || ballot.accessCode,
       maxBoyPicks: finalMaxBoy,
       maxGirlPicks: finalMaxGirl,
       openTime: new Date(openTimeInput).toISOString(),
@@ -131,7 +131,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               required
               value={accessCode}
               onChange={(e) => setAccessCode(e.target.value)}
-              className="mt-1.5 block w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm font-mono uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white"
+              className="mt-1.5 block w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white"
             />
           </div>
         </div>

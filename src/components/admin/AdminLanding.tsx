@@ -100,15 +100,15 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
     setCreateError(null);
 
     const name = newBallotName.trim();
-    const code = newAccessCode.trim().toUpperCase();
+    const code = newAccessCode.trim();
 
     if (!name || !code) {
       setCreateError('Vul asseblief albei velde in.');
       return;
     }
 
-    // Check if code is taken by existing ballot
-    if (ballots.some((b) => b.accessCode.toUpperCase() === code)) {
+    // Check if code is taken by existing ballot (case-insensitive)
+    if (ballots.some((b) => b.accessCode.toLowerCase() === code.toLowerCase())) {
       setCreateError(`Die toelatingskode "${code}" is reeds in gebruik deur 'n ander stembrief.`);
       return;
     }
@@ -629,7 +629,7 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
                   value={newAccessCode}
                   onChange={(e) => setNewAccessCode(e.target.value)}
                   placeholder="Bv. VRL2026 of KLAS8B"
-                  className="mt-1.5 block w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm font-mono uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  className="mt-1.5 block w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-slate-900"
                 />
                 <p className="text-[11px] text-slate-500 mt-1">
                   Hierdie kode word deur leerders ingesleutel om toegang tot die spesifieke stembrief te kry.
