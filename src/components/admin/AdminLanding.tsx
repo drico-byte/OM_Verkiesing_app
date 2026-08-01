@@ -18,10 +18,12 @@ import {
   Image as ImageIcon,
   Loader2,
   QrCode,
-  Download
+  Download,
+  AlertCircle
 } from 'lucide-react';
 import { AdminSettings, Ballot } from '../../types';
 import { compressAndResizeImage } from '../../lib/imageUtils';
+import { changeAdminPassword } from '../../lib/firebase';
 
 interface AdminLandingProps {
   adminSettings: AdminSettings;
@@ -56,10 +58,12 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
 
   // Admin settings edit state
   const [editSchoolName, setEditSchoolName] = useState(adminSettings.schoolName);
-  const [editAdminPassword, setEditAdminPassword] = useState(adminSettings.adminPassword);
+  const [newAdminPassword, setNewAdminPassword] = useState('');
   const [logoPreview, setLogoPreview] = useState<string | null>(adminSettings.schoolLogoUrl);
   const [isCompressingLogo, setIsCompressingLogo] = useState(false);
   const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   // QR code for easy learner access to the app
   const appUrl = window.location.origin;
@@ -67,7 +71,6 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
 
   useEffect(() => {
     setEditSchoolName(adminSettings.schoolName);
-    setEditAdminPassword(adminSettings.adminPassword);
     setLogoPreview(adminSettings.schoolLogoUrl);
   }, [adminSettings]);
 
@@ -132,13 +135,31 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
     }
   };
 
-  const handleSaveSettingsSubmit = (e: React.FormEvent) => {
+  const handleSaveSettingsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSettingsError(null);
+    setIsSavingSettings(true);
+
+    const trimmedNewPassword = newAdminPassword.trim();
+
+    if (trimmedNewPassword) {
+      const result = await changeAdminPassword(trimmedNewPassword);
+
+      if (!result.success) {
+        setIsSavingSettings(false);
+        setSettingsError(result.reason || 'Die wagwoord kon nie verander word nie.');
+        return;
+      }
+
+      setNewAdminPassword('');
+    }
+
     onSaveAdminSettings({
-      adminPassword: editAdminPassword.trim() || 'OMAdmin123!',
       schoolLogoUrl: logoPreview,
       schoolName: editSchoolName.trim(),
     });
+
+    setIsSavingSettings(false);
     setSettingsSuccess('Stelsel-instellings is suksesvol opgedateer.');
     setTimeout(() => setSettingsSuccess(null), 4000);
   };
@@ -323,7 +344,7 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
           <div>
             <h2 className="text-xl font-bold text-slate-900">Algemene Stelsel- & Skoolinstellings</h2>
             <p className="text-xs text-slate-500 mt-1">
-              Opdateer die skoolnaam, adminwagwoord, hoof-welkomboodskap en die skoollogo wat op die beginblad verskyn.
+              Opdateer die skoolnaam, adminwagwoord en die skoollogo wat op die beginblad verskyn.
             </p>
           </div>
 
@@ -331,6 +352,13 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
             <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-xs sm:text-sm text-emerald-900 flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
               <span>{settingsSuccess}</span>
+            </div>
+          )}
+
+          {settingsError && (
+            <div className="rounded-xl bg-rose-50 border border-rose-200 p-4 text-xs sm:text-sm text-rose-900 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+              <span>{settingsError}</span>
             </div>
           )}
 
@@ -357,15 +385,14 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
                 <div className="relative mt-2">
                   <input
                     type="text"
-                    required
-                    value={editAdminPassword}
-                    onChange={(e) => setEditAdminPassword(e.target.value)}
-                    placeholder="Wagwoord vir admin toegang..."
+                    value={newAdminPassword}
+                    onChange={(e) => setNewAdminPassword(e.target.value)}
+                    placeholder="Los leeg om ongewysig te laat"
                     className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white"
                   />
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  Hierdie wagwoord word in die toelatingskode-teksboks ingesleutel vir admin-toegang.
+                  Vul slegs hierdie veld in as jy die adminwagwoord wil verander. Dit word in die toelatingskode-teksboks ingesleutel vir admin-toegang.
                 </p>
               </div>
             </div>
@@ -421,9 +448,10 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
             <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
               <button
                 type="submit"
-                className="w-full sm:w-auto px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl shadow-md shadow-slate-900/10 transition-all cursor-pointer"
+                disabled={isSavingSettings}
+                className="w-full sm:w-auto px-6 py-3 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:pointer-events-none text-white font-bold text-sm rounded-xl shadow-md shadow-slate-900/10 transition-all cursor-pointer"
               >
-                Stoor Instellings
+                {isSavingSettings ? 'Stoor...' : 'Stoor Instellings'}
               </button>
 
               <button

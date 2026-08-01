@@ -1,5 +1,12 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import {
+  browserSessionPersistence,
+  getAuth,
+  signInWithEmailAndPassword,
+  signOut,
+  setPersistence,
+  updatePassword,
+} from 'firebase/auth';
 import {
   collection,
   deleteDoc,
@@ -50,6 +57,23 @@ const createDatabaseInstance = () => {
 export const db = createDatabaseInstance();
 export const auth = app ? getAuth(app) : null;
 
+/*
+ * Clears the admin session when the browser/tab closes, rather than
+ * persisting indefinitely, so a forgotten logout on a shared school
+ * computer doesn't leave admin access open for whoever uses it next.
+ */
+if (auth) {
+  setPersistence(auth, browserSessionPersistence);
+}
+
+/*
+ * There is exactly one admin account. This email is never seen or
+ * entered by anyone - it only exists so Firebase Auth has an identity
+ * to sign in as. The admin password box on the landing page is the
+ * only credential a person ever provides.
+ */
+const ADMIN_EMAIL = 'admin@om-verkiesings.internal';
+
 enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
@@ -70,6 +94,11 @@ interface FirestoreErrorInfo {
 }
 
 interface VoteSubmissionResult {
+  success: boolean;
+  reason?: string;
+}
+
+interface OperationResult {
   success: boolean;
   reason?: string;
 }
@@ -160,6 +189,90 @@ if (isFirebaseConfigured) {
 
 function sanitizeForFirestore<T>(data: T): T {
   return JSON.parse(JSON.stringify(data)) as T;
+}
+
+export async function signInAdmin(
+  password: string
+): Promise<boolean> {
+  if (!auth) {
+    return false;
+  }
+
+  try {
+    await signInWithEmailAndPassword(
+      auth,
+      ADMIN_EMAIL,
+      password
+    );
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function signOutAdmin(): Promise<void> {
+  if (!auth) {
+    return;
+  }
+
+  try {
+    await signOut(auth);
+  } catch (error) {
+    console.warn('Error signing out admin:', error);
+  }
+}
+
+export async function changeAdminPassword(
+  newPassword: string
+): Promise<OperationResult> {
+  if (!auth || !auth.currentUser) {
+    return {
+      success: false,
+      reason:
+        'Jy is nie meer aangemeld nie. Meld asseblief weer aan en probeer weer.',
+    };
+  }
+
+  try {
+    await updatePassword(
+      auth.currentUser,
+      newPassword
+    );
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    const errorCode =
+      error instanceof Error && 'code' in error
+        ? (error as { code: string }).code
+        : null;
+
+    if (errorCode === 'auth/requires-recent-login') {
+      return {
+        success: false,
+        reason:
+          'Meld asseblief eers af en weer aan voordat jy die wagwoord verander.',
+      };
+    }
+
+    if (errorCode === 'auth/weak-password') {
+      return {
+        success: false,
+        reason:
+          'Die wagwoord is te kort. Gebruik ten minste 6 karakters.',
+      };
+    }
+
+    console.warn('Error changing admin password:', error);
+
+    return {
+      success: false,
+      reason:
+        'Die wagwoord kon nie verander word nie. Probeer asseblief weer.',
+    };
+  }
 }
 
 export function subscribeAdminSettings(

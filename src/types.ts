@@ -34,7 +34,6 @@ export interface Ballot {
 }
 
 export interface AdminSettings {
-  adminPassword: string;
   schoolLogoUrl: string | null;
   schoolName: string;
 }

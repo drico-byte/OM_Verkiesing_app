@@ -22,7 +22,6 @@ function deepRepairObject<T>(obj: T): T {
 }
 
 export const INITIAL_ADMIN_SETTINGS: AdminSettings = {
-  adminPassword: 'OMAdmin123!',
   schoolLogoUrl: null,
   schoolName: '',
 };

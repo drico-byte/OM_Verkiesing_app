@@ -1,24 +1,24 @@
 import React, { useState } from 'react';
-import { KeyRound, ArrowRight, AlertCircle } from 'lucide-react';
-import { AdminSettings, Ballot } from '../types';
+import { KeyRound, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { Ballot } from '../types';
+import { signInAdmin } from '../lib/firebase';
 
 interface AppLandingProps {
-  adminSettings: AdminSettings;
   ballots: Ballot[];
   onAdminLogin: () => void;
   onEnterLearnerBallot: (ballotId: string) => void;
 }
 
 export const AppLanding: React.FC<AppLandingProps> = ({
-  adminSettings,
   ballots,
   onAdminLogin,
   onEnterLearnerBallot,
 }) => {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -28,13 +28,7 @@ export const AppLanding: React.FC<AppLandingProps> = ({
       return;
     }
 
-    // 1. Check if it's the admin password
-    if (trimmedCode === adminSettings.adminPassword) {
-      onAdminLogin();
-      return;
-    }
-
-    // 2. Check if it matches a ballot's access code (case insensitive)
+    // 1. Check if it matches a ballot's access code (case insensitive)
     const matchingBallot = ballots.find(
       (b) => b.accessCode.trim().toLowerCase() === trimmedCode.toLowerCase()
     );
@@ -60,6 +54,16 @@ export const AppLanding: React.FC<AppLandingProps> = ({
       }
 
       onEnterLearnerBallot(matchingBallot.id);
+      return;
+    }
+
+    // 2. Otherwise, check if it's the admin password
+    setIsSubmitting(true);
+    const isAdmin = await signInAdmin(trimmedCode);
+    setIsSubmitting(false);
+
+    if (isAdmin) {
+      onAdminLogin();
       return;
     }
 
@@ -107,10 +111,20 @@ export const AppLanding: React.FC<AppLandingProps> = ({
 
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-md shadow-slate-900/10 text-base font-bold text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-all cursor-pointer transform active:scale-[0.99]"
+              disabled={isSubmitting}
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-md shadow-slate-900/10 text-base font-bold text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-all cursor-pointer transform active:scale-[0.99]"
             >
-              <span className="text-[#EAC321]">Gaan Voort na Stembrief</span>
-              <ArrowRight className="w-5 h-5 text-[#EAC321]" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 text-[#EAC321] animate-spin" />
+                  <span className="text-[#EAC321]">Besig...</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-[#EAC321]">Gaan Voort na Stembrief</span>
+                  <ArrowRight className="w-5 h-5 text-[#EAC321]" />
+                </>
+              )}
             </button>
           </form>
         </div>

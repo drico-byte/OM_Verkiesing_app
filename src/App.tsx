@@ -22,6 +22,7 @@ import {
   subscribePermissionError,
   submitVoteCloud,
   subscribeVotes,
+  signOutAdmin,
 } from './lib/firebase';
 import { Header } from './components/Header';
 import { AppLanding } from './components/AppLanding';
@@ -385,11 +386,12 @@ export default function App() {
       <Header
         adminSettings={adminSettings}
         viewMode={viewMode}
-        onNavigateHome={() =>
+        onNavigateHome={() => {
+          signOutAdmin();
           setViewMode({
             type: 'app_landing',
-          })
-        }
+          });
+        }}
         onNavigateAdminHome={() =>
           setViewMode({
             type: 'admin_landing',
@@ -400,7 +402,6 @@ export default function App() {
       <main className="flex-1">
         {viewMode.type === 'app_landing' && (
           <AppLanding
-            adminSettings={adminSettings}
             ballots={ballots}
             onAdminLogin={() =>
               setViewMode({
