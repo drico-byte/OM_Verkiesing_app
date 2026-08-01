@@ -152,12 +152,12 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
           <div className="border-b-2 border-slate-900 pb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-3">
+                {settings.schoolLogoUrl ? (
+                  <img src={settings.schoolLogoUrl} alt={schoolName} className="h-[72px] w-[72px] object-contain shrink-0" />
+                ) : null}
                 <h1 className="text-2xl font-black font-serif text-slate-900 tracking-tight uppercase">
                   {schoolName}
                 </h1>
-                {settings.schoolLogoUrl ? (
-                  <img src={settings.schoolLogoUrl} alt={schoolName} className="h-12 w-12 object-contain shrink-0" />
-                ) : null}
               </div>
               <p className="text-sm font-bold text-slate-700 uppercase tracking-widest mt-0.5">
                 Amptelike Verkiesingsverslag
