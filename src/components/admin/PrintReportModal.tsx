@@ -1,13 +1,56 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, Download, Copy, Check, X, FileText, Award, Users, CheckCircle2 } from 'lucide-react';
-import { Ballot } from '../../types';
+import { Ballot, Candidate } from '../../types';
 import { getStoredAdminSettings } from '../../lib/storage';
 import { exportBallotResultsCsv } from '../../lib/csvHelper';
 
 interface PrintReportModalProps {
   ballot: Ballot;
   onClose: () => void;
+}
+
+interface ResultRow {
+  candidate: Candidate;
+  votes: number;
+  rank: number;
+  isElected: boolean;
+}
+
+/*
+ * Standard competition ranking (like Olympic medals): tied candidates
+ * share the same rank and the next rank skips ahead accordingly
+ * (1, 2, 2, 4 - not 1, 2, 3, 4). "Elected" is based on the vote count
+ * at the cutoff, not the row position, so a tie for the last spot
+ * highlights everyone tied there rather than picking one arbitrarily.
+ */
+function buildResultsRows(
+  sortedCandidates: Candidate[],
+  counts: { [id: string]: number },
+  maxPicks: number
+): ResultRow[] {
+  const cutoffIndex = Math.min(maxPicks, sortedCandidates.length) - 1;
+
+  const electedThreshold =
+    maxPicks > 0 && cutoffIndex >= 0
+      ? counts[sortedCandidates[cutoffIndex].id] || 0
+      : null;
+
+  let previousVotes: number | null = null;
+  let previousRank = 0;
+
+  return sortedCandidates.map((candidate, index) => {
+    const votes = counts[candidate.id] || 0;
+    const rank = votes === previousVotes ? previousRank : index + 1;
+
+    previousVotes = votes;
+    previousRank = rank;
+
+    const isElected =
+      electedThreshold !== null && votes > 0 && votes >= electedThreshold;
+
+    return { candidate, votes, rank, isElected };
+  });
 }
 
 export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onClose }) => {
@@ -40,6 +83,9 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
   });
 
   const sortedGirls = [...ballot.girlsCandidates].sort((a, b) => girlCounts[b.id] - girlCounts[a.id]);
+
+  const boysResults = buildResultsRows(sortedBoys, boyCounts, ballot.maxBoyPicks);
+  const girlsResults = buildResultsRows(sortedGirls, girlCounts, ballot.maxGirlPicks);
 
   // Date(s) voting actually took place, derived from the vote timestamps
   // themselves - not the date this report happens to be printed.
@@ -79,17 +125,15 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
     text += `Totaal Gemagtig: ${totalValid} | Stemme Ingedien: ${totalVotesCast} (${pct}%)\n\n`;
 
     text += `--- SEUNS KANDIDATE UITSLAE ---\n`;
-    sortedBoys.forEach((c, i) => {
-      const votes = boyCounts[c.id] || 0;
-      const cPct = totalVotesCast > 0 ? ((votes / totalVotesCast) * 100).toFixed(1) : '0';
-      text += `${i + 1}. ${c.name} - ${votes} stemme (${cPct}%)\n`;
+    boysResults.forEach((row) => {
+      const cPct = totalVotesCast > 0 ? ((row.votes / totalVotesCast) * 100).toFixed(1) : '0';
+      text += `${row.rank}. ${row.candidate.name} - ${row.votes} stemme (${cPct}%)\n`;
     });
 
     text += `\n--- DOGTERS KANDIDATE UITSLAE ---\n`;
-    sortedGirls.forEach((c, i) => {
-      const votes = girlCounts[c.id] || 0;
-      const cPct = totalVotesCast > 0 ? ((votes / totalVotesCast) * 100).toFixed(1) : '0';
-      text += `${i + 1}. ${c.name} - ${votes} stemme (${cPct}%)\n`;
+    girlsResults.forEach((row) => {
+      const cPct = totalVotesCast > 0 ? ((row.votes / totalVotesCast) * 100).toFixed(1) : '0';
+      text += `${row.rank}. ${row.candidate.name} - ${row.votes} stemme (${cPct}%)\n`;
     });
 
     navigator.clipboard.writeText(text);
@@ -220,16 +264,14 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {sortedBoys.map((c, index) => {
-                    const votes = boyCounts[c.id] || 0;
-                    const candidatePct = totalVotesCast > 0 ? ((votes / totalVotesCast) * 100).toFixed(1) : '0';
-                    const isElected = index < ballot.maxBoyPicks && votes > 0;
+                  {boysResults.map((row) => {
+                    const candidatePct = totalVotesCast > 0 ? ((row.votes / totalVotesCast) * 100).toFixed(1) : '0';
 
                     return (
-                      <tr key={c.id} className={isElected ? 'bg-emerald-50/50' : ''}>
-                        <td className="py-1.5 px-3 font-mono font-bold text-center text-slate-700">{index + 1}</td>
-                        <td className="py-1.5 px-3 font-bold text-slate-900">{c.name}</td>
-                        <td className="py-1.5 px-3 font-mono font-bold text-right text-slate-900">{votes}</td>
+                      <tr key={row.candidate.id} className={row.isElected ? 'bg-emerald-50/50' : ''}>
+                        <td className="py-1.5 px-3 font-mono font-bold text-center text-slate-700">{row.rank}</td>
+                        <td className="py-1.5 px-3 font-bold text-slate-900">{row.candidate.name}</td>
+                        <td className="py-1.5 px-3 font-mono font-bold text-right text-slate-900">{row.votes}</td>
                         <td className="py-1.5 px-3 font-mono text-right text-slate-700">{candidatePct}%</td>
                       </tr>
                     );
@@ -261,16 +303,14 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {sortedGirls.map((c, index) => {
-                    const votes = girlCounts[c.id] || 0;
-                    const candidatePct = totalVotesCast > 0 ? ((votes / totalVotesCast) * 100).toFixed(1) : '0';
-                    const isElected = index < ballot.maxGirlPicks && votes > 0;
+                  {girlsResults.map((row) => {
+                    const candidatePct = totalVotesCast > 0 ? ((row.votes / totalVotesCast) * 100).toFixed(1) : '0';
 
                     return (
-                      <tr key={c.id} className={isElected ? 'bg-emerald-50/50' : ''}>
-                        <td className="py-1.5 px-3 font-mono font-bold text-center text-slate-700">{index + 1}</td>
-                        <td className="py-1.5 px-3 font-bold text-slate-900">{c.name}</td>
-                        <td className="py-1.5 px-3 font-mono font-bold text-right text-slate-900">{votes}</td>
+                      <tr key={row.candidate.id} className={row.isElected ? 'bg-emerald-50/50' : ''}>
+                        <td className="py-1.5 px-3 font-mono font-bold text-center text-slate-700">{row.rank}</td>
+                        <td className="py-1.5 px-3 font-bold text-slate-900">{row.candidate.name}</td>
+                        <td className="py-1.5 px-3 font-mono font-bold text-right text-slate-900">{row.votes}</td>
                         <td className="py-1.5 px-3 font-mono text-right text-slate-700">{candidatePct}%</td>
                       </tr>
                     );
