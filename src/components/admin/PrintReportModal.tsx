@@ -41,13 +41,32 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
 
   const sortedGirls = [...ballot.girlsCandidates].sort((a, b) => girlCounts[b.id] - girlCounts[a.id]);
 
-  const reportDate = new Date().toLocaleDateString('af-ZA', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  // Date(s) voting actually took place, derived from the vote timestamps
+  // themselves - not the date this report happens to be printed.
+  const formatVoteDate = (date: Date) =>
+    date.toLocaleDateString('af-ZA', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+  const voteTimestamps = ballot.votes
+    .map((v) => new Date(v.timestamp).getTime())
+    .filter((time) => !isNaN(time));
+
+  let electionDate: string;
+
+  if (voteTimestamps.length === 0) {
+    electionDate = 'Geen stemme ingedien nie';
+  } else {
+    const earliest = new Date(Math.min(...voteTimestamps));
+    const latest = new Date(Math.max(...voteTimestamps));
+
+    electionDate =
+      earliest.toDateString() === latest.toDateString()
+        ? formatVoteDate(earliest)
+        : `${formatVoteDate(earliest)} - ${formatVoteDate(latest)}`;
+  }
 
   const handlePrint = () => {
     window.print();
@@ -56,7 +75,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
   const handleCopySummaryText = () => {
     let text = `AMPTELIKE VERKIESINGSVERSLAG: ${ballot.name}\n`;
     text += `Skool: ${schoolName}\n`;
-    text += `Datum van Verkiesing: ${reportDate}\n`;
+    text += `Datum van Verkiesing: ${electionDate}\n`;
     text += `Totaal Gemagtig: ${totalValid} | Stemme Ingedien: ${totalVotesCast} (${pct}%)\n\n`;
 
     text += `--- SEUNS KANDIDATE UITSLAE ---\n`;
@@ -132,20 +151,22 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
           {/* Header Section */}
           <div className="border-b-2 border-slate-900 pb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              {settings.schoolLogoUrl ? (
-                <img src={settings.schoolLogoUrl} alt={schoolName} className="h-14 object-contain mb-2" />
-              ) : null}
-              <h1 className="text-2xl font-black font-serif text-slate-900 tracking-tight uppercase">
-                {schoolName}
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-black font-serif text-slate-900 tracking-tight uppercase">
+                  {schoolName}
+                </h1>
+                {settings.schoolLogoUrl ? (
+                  <img src={settings.schoolLogoUrl} alt={schoolName} className="h-12 w-12 object-contain shrink-0" />
+                ) : null}
+              </div>
               <p className="text-sm font-bold text-slate-700 uppercase tracking-widest mt-0.5">
-                Amptelike Verkiesingsverslag &amp; Uitslae
+                Amptelike Verkiesingsverslag
               </p>
             </div>
 
             <div className="text-left sm:text-right text-xs text-slate-600 font-mono space-y-1">
               <div><strong className="text-slate-900">Stembrief:</strong> {ballot.name}</div>
-              <div><strong className="text-slate-900">Datum van Verkiesing:</strong> {reportDate}</div>
+              <div><strong className="text-slate-900">Datum van Verkiesing:</strong> {electionDate}</div>
             </div>
           </div>
 
@@ -168,8 +189,11 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
 
             <div className="space-y-1">
               <span className="text-slate-500 font-medium block">Maks. Keuses (S / D)</span>
-              <span className="text-lg font-black text-slate-900 font-mono">
-                {ballot.maxBoyPicks} Seuns / {ballot.maxGirlPicks} Dogters
+              <span className="text-lg font-black text-slate-900 font-mono block leading-tight">
+                {ballot.maxBoyPicks} Seuns
+              </span>
+              <span className="text-lg font-black text-slate-900 font-mono block leading-tight">
+                {ballot.maxGirlPicks} Dogters
               </span>
             </div>
           </div>
