@@ -74,11 +74,15 @@ export const AppLanding: React.FC<AppLandingProps> = ({
   };
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] bg-slate-50 flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8 mt-[22px] rounded-[30px]">
+    <div className="min-h-[calc(100vh-5rem)] bg-slate-50 flex flex-col items-center px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md flex-1 flex flex-col items-center">
+        {/* Equal spacer above the logo - matches the spacer below it, so the
+            logo sits exactly halfway between the header and the form card. */}
+        <div className="flex-1" />
+
         {/* School Branding */}
         <div className="text-center">
-          <div className="mx-auto w-[140px] h-[140px] rounded-[36px] bg-white flex items-center justify-center p-2 shadow-xl shadow-slate-900/10 border-0">
+          <div className="mx-auto w-[210px] h-[210px] rounded-[54px] bg-white flex items-center justify-center p-2 shadow-xl shadow-slate-900/10 border-0">
             {adminSettings.schoolLogoUrl ? (
               <img
                 src={adminSettings.schoolLogoUrl}
@@ -86,13 +90,16 @@ export const AppLanding: React.FC<AppLandingProps> = ({
                 className="w-full h-full object-contain rounded-xl"
               />
             ) : (
-              <School className="w-12 h-12 text-slate-800" />
+              <School className="w-[72px] h-[72px] text-slate-800" />
             )}
           </div>
         </div>
 
+        {/* Equal spacer below the logo - see note above. */}
+        <div className="flex-1" />
+
         {/* Input Form Card */}
-        <div className="bg-white py-8 px-6 shadow-sm rounded-xl border border-slate-200/90 sm:px-8">
+        <div className="w-full bg-white py-8 px-6 shadow-sm rounded-xl border border-slate-200/90 sm:px-8 mb-12">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="text-center">
               <label htmlFor="toelatingskode" className="block text-xl sm:text-2xl font-bold text-slate-900 text-center">
