@@ -56,22 +56,21 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
   const handleCopySummaryText = () => {
     let text = `AMPTELIKE VERKIESINGSVERSLAG: ${ballot.name}\n`;
     text += `Skool: ${schoolName}\n`;
-    text += `Datum: ${reportDate}\n`;
-    text += `Toelatingskode: ${ballot.accessCode}\n`;
+    text += `Datum van Verkiesing: ${reportDate}\n`;
     text += `Totaal Gemagtig: ${totalValid} | Stemme Ingedien: ${totalVotesCast} (${pct}%)\n\n`;
 
     text += `--- SEUNS KANDIDATE UITSLAE ---\n`;
     sortedBoys.forEach((c, i) => {
       const votes = boyCounts[c.id] || 0;
       const cPct = totalVotesCast > 0 ? ((votes / totalVotesCast) * 100).toFixed(1) : '0';
-      text += `${i + 1}. ${c.name} (${c.grade || 'N/V'}) - ${votes} stemme (${cPct}%)\n`;
+      text += `${i + 1}. ${c.name} - ${votes} stemme (${cPct}%)\n`;
     });
 
     text += `\n--- DOGTERS KANDIDATE UITSLAE ---\n`;
     sortedGirls.forEach((c, i) => {
       const votes = girlCounts[c.id] || 0;
       const cPct = totalVotesCast > 0 ? ((votes / totalVotesCast) * 100).toFixed(1) : '0';
-      text += `${i + 1}. ${c.name} (${c.grade || 'N/V'}) - ${votes} stemme (${cPct}%)\n`;
+      text += `${i + 1}. ${c.name} - ${votes} stemme (${cPct}%)\n`;
     });
 
     navigator.clipboard.writeText(text);
@@ -146,8 +145,7 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
 
             <div className="text-left sm:text-right text-xs text-slate-600 font-mono space-y-1">
               <div><strong className="text-slate-900">Stembrief:</strong> {ballot.name}</div>
-              <div><strong className="text-slate-900">Kode:</strong> {ballot.accessCode}</div>
-              <div><strong className="text-slate-900">Datum van Uitreiking:</strong> {reportDate}</div>
+              <div><strong className="text-slate-900">Datum van Verkiesing:</strong> {reportDate}</div>
             </div>
           </div>
 
@@ -191,12 +189,10 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
               <table className="w-full text-xs text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-100 text-slate-800 border-y border-slate-300 font-bold uppercase tracking-wider">
-                    <th className="py-2 px-3 w-12 text-center">Rang</th>
-                    <th className="py-2 px-3">Kandidaat Naam</th>
-                    <th className="py-2 px-3 w-24">Graad</th>
-                    <th className="py-2 px-3 w-28 text-right">Totaal Stemme</th>
-                    <th className="py-2 px-3 w-28 text-right">Persentasie</th>
-                    <th className="py-2 px-3 w-24 text-center">Aanduiding</th>
+                    <th className="py-1.5 px-3 w-12 text-center">Rang</th>
+                    <th className="py-1.5 px-3">Kandidaat Naam</th>
+                    <th className="py-1.5 px-3 w-28 text-right">Totaal Stemme</th>
+                    <th className="py-1.5 px-3 w-28 text-right">Persentasie</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -207,20 +203,10 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
 
                     return (
                       <tr key={c.id} className={isElected ? 'bg-emerald-50/50' : ''}>
-                        <td className="py-2.5 px-3 font-mono font-bold text-center text-slate-700">{index + 1}</td>
-                        <td className="py-2.5 px-3 font-bold text-slate-900">{c.name}</td>
-                        <td className="py-2.5 px-3 text-slate-600">{c.grade || '-'}</td>
-                        <td className="py-2.5 px-3 font-mono font-bold text-right text-slate-900">{votes}</td>
-                        <td className="py-2.5 px-3 font-mono text-right text-slate-700">{candidatePct}%</td>
-                        <td className="py-2.5 px-3 text-center">
-                          {isElected ? (
-                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 text-emerald-900 border border-emerald-300">
-                              Verkose
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-400">-</span>
-                          )}
-                        </td>
+                        <td className="py-1.5 px-3 font-mono font-bold text-center text-slate-700">{index + 1}</td>
+                        <td className="py-1.5 px-3 font-bold text-slate-900">{c.name}</td>
+                        <td className="py-1.5 px-3 font-mono font-bold text-right text-slate-900">{votes}</td>
+                        <td className="py-1.5 px-3 font-mono text-right text-slate-700">{candidatePct}%</td>
                       </tr>
                     );
                   })}
@@ -244,12 +230,10 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
               <table className="w-full text-xs text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-100 text-slate-800 border-y border-slate-300 font-bold uppercase tracking-wider">
-                    <th className="py-2 px-3 w-12 text-center">Rang</th>
-                    <th className="py-2 px-3">Kandidaat Naam</th>
-                    <th className="py-2 px-3 w-24">Graad</th>
-                    <th className="py-2 px-3 w-28 text-right">Totaal Stemme</th>
-                    <th className="py-2 px-3 w-28 text-right">Persentasie</th>
-                    <th className="py-2 px-3 w-24 text-center">Aanduiding</th>
+                    <th className="py-1.5 px-3 w-12 text-center">Rang</th>
+                    <th className="py-1.5 px-3">Kandidaat Naam</th>
+                    <th className="py-1.5 px-3 w-28 text-right">Totaal Stemme</th>
+                    <th className="py-1.5 px-3 w-28 text-right">Persentasie</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -260,20 +244,10 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
 
                     return (
                       <tr key={c.id} className={isElected ? 'bg-emerald-50/50' : ''}>
-                        <td className="py-2.5 px-3 font-mono font-bold text-center text-slate-700">{index + 1}</td>
-                        <td className="py-2.5 px-3 font-bold text-slate-900">{c.name}</td>
-                        <td className="py-2.5 px-3 text-slate-600">{c.grade || '-'}</td>
-                        <td className="py-2.5 px-3 font-mono font-bold text-right text-slate-900">{votes}</td>
-                        <td className="py-2.5 px-3 font-mono text-right text-slate-700">{candidatePct}%</td>
-                        <td className="py-2.5 px-3 text-center">
-                          {isElected ? (
-                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 text-emerald-900 border border-emerald-300">
-                              Verkose
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-400">-</span>
-                          )}
-                        </td>
+                        <td className="py-1.5 px-3 font-mono font-bold text-center text-slate-700">{index + 1}</td>
+                        <td className="py-1.5 px-3 font-bold text-slate-900">{c.name}</td>
+                        <td className="py-1.5 px-3 font-mono font-bold text-right text-slate-900">{votes}</td>
+                        <td className="py-1.5 px-3 font-mono text-right text-slate-700">{candidatePct}%</td>
                       </tr>
                     );
                   })}

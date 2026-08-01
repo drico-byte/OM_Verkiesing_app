@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { 
-  Check, 
-  ArrowRight, 
-  ArrowLeft, 
-  CheckCircle2, 
-  Search, 
-  Edit3, 
-  Vote, 
+import {
+  Check,
+  ArrowRight,
+  ArrowLeft,
+  CheckCircle2,
+  Search,
+  Edit3,
+  Vote,
   Sparkles,
-  School
+  School,
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { AdminSettings, Ballot, Candidate } from '../../types';
 
@@ -16,7 +18,7 @@ interface LearnerVotingFlowProps {
   adminSettings: AdminSettings;
   ballot: Ballot;
   voterId: string;
-  onSubmitVote: (selectedBoyIds: string[], selectedGirlIds: string[]) => void;
+  onSubmitVote: (selectedBoyIds: string[], selectedGirlIds: string[]) => Promise<void>;
   onFinishAndHome: () => void;
 }
 
@@ -34,6 +36,8 @@ export const LearnerVotingFlow: React.FC<LearnerVotingFlowProps> = ({
   const [selectedGirlIds, setSelectedGirlIds] = useState<string[]>([]);
   const [boySearch, setBoySearch] = useState('');
   const [girlSearch, setGirlSearch] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Toggle boy candidate selection (max limit enforced unless 0)
   const toggleBoy = (id: string) => {
@@ -61,9 +65,22 @@ export const LearnerVotingFlow: React.FC<LearnerVotingFlowProps> = ({
     }
   };
 
-  const handleFinalSubmit = () => {
-    onSubmitVote(selectedBoyIds, selectedGirlIds);
-    setCurrentStep('thank_you');
+  const handleFinalSubmit = async () => {
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    try {
+      await onSubmitVote(selectedBoyIds, selectedGirlIds);
+      setCurrentStep('thank_you');
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : 'Die stem kon nie ingedien word nie. Probeer asseblief weer.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const filteredBoys = ballot.boysCandidates.filter((c) =>
@@ -366,10 +383,18 @@ export const LearnerVotingFlow: React.FC<LearnerVotingFlowProps> = ({
             </div>
           </div>
 
+          {submitError && (
+            <div className="rounded-xl bg-rose-50 border border-rose-200 p-3.5 text-xs sm:text-sm text-rose-800 flex items-start gap-2.5 animate-fadeIn">
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div>{submitError}</div>
+            </div>
+          )}
+
           <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
             <button
               onClick={() => setCurrentStep('girls')}
-              className="px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer"
+              disabled={isSubmitting}
+              className="px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:pointer-events-none"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Wysig Keuses</span>
@@ -377,10 +402,20 @@ export const LearnerVotingFlow: React.FC<LearnerVotingFlowProps> = ({
 
             <button
               onClick={handleFinalSubmit}
-              className="px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-sm sm:text-base rounded-xl shadow-lg shadow-slate-900/10 transition-all cursor-pointer flex items-center gap-2.5 transform active:scale-95"
+              disabled={isSubmitting}
+              className="px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-sm sm:text-base rounded-xl shadow-lg shadow-slate-900/10 transition-all cursor-pointer flex items-center gap-2.5 transform active:scale-95 disabled:opacity-60 disabled:pointer-events-none"
             >
-              <Vote className="w-5 h-5" />
-              <span>Dien My Stem In</span>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Besig om in te dien...</span>
+                </>
+              ) : (
+                <>
+                  <Vote className="w-5 h-5" />
+                  <span>Dien My Stem In</span>
+                </>
+              )}
             </button>
           </div>
         </div>

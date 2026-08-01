@@ -578,7 +578,7 @@ export async function submitVoteCloud(
       return {
         success: false,
         reason:
-          'Hierdie leerder het reeds gestem.',
+          "Hierdie ID het reeds 'n stem ingedien. Kontroleer of jy die korrekte ID gebruik het.",
       };
     }
 
