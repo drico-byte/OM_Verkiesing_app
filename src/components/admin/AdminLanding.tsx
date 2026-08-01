@@ -19,7 +19,8 @@ import {
   Loader2,
   QrCode,
   Download,
-  AlertCircle
+  AlertCircle,
+  Copy
 } from 'lucide-react';
 import { AdminSettings, Ballot } from '../../types';
 import { compressAndResizeImage } from '../../lib/imageUtils';
@@ -30,6 +31,7 @@ interface AdminLandingProps {
   ballots: Ballot[];
   onSaveAdminSettings: (settings: AdminSettings) => void;
   onCreateBallot: (name: string, accessCode: string) => void;
+  onCopyBallot: (ballotId: string) => void;
   onDeleteBallot: (ballotId: string) => void;
   onToggleManualOpen: (ballotId: string, isOpen: boolean) => void;
   onSelectBallot: (ballotId: string) => void;
@@ -41,6 +43,7 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
   ballots,
   onSaveAdminSettings,
   onCreateBallot,
+  onCopyBallot,
   onDeleteBallot,
   onToggleManualOpen,
   onSelectBallot,
@@ -271,7 +274,18 @@ export const AdminLanding: React.FC<AdminLandingProps> = ({
                           >
                             {ballot.isManualOpen ? 'Sluit Handmatig' : 'Maak Oop'}
                           </button>
-                          
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCopyBallot(ballot.id);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                            title="Dupliseer Stembrief"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

@@ -4,11 +4,13 @@ import { Ballot } from '../../../types';
 
 interface SettingsTabProps {
   ballot: Ballot;
+  ballots: Ballot[];
   onUpdateBallot: (updatedBallot: Ballot) => void;
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
   ballot,
+  ballots,
   onUpdateBallot,
 }) => {
   const [name, setName] = useState(ballot.name);
@@ -34,17 +36,33 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [isManualOpen, setIsManualOpen] = useState(ballot.isManualOpen);
 
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setSaveError(null);
 
     const finalMaxBoy = isBoyUnlimited ? 0 : Math.min(30, Math.max(1, Number(maxBoyPicks) || 15));
     const finalMaxGirl = isGirlUnlimited ? 0 : Math.min(30, Math.max(1, Number(maxGirlPicks) || 15));
+    const finalAccessCode = accessCode.trim() || ballot.accessCode;
+
+    const codeTakenByAnotherBallot = ballots.some(
+      (otherBallot) =>
+        otherBallot.id !== ballot.id &&
+        otherBallot.accessCode.toLowerCase() === finalAccessCode.toLowerCase()
+    );
+
+    if (codeTakenByAnotherBallot) {
+      setSaveError(
+        `Die toelatingskode "${finalAccessCode}" is reeds in gebruik deur 'n ander stembrief.`
+      );
+      return;
+    }
 
     const updatedBallot: Ballot = {
       ...ballot,
       name: name.trim() || ballot.name,
-      accessCode: accessCode.trim() || ballot.accessCode,
+      accessCode: finalAccessCode,
       maxBoyPicks: finalMaxBoy,
       maxGirlPicks: finalMaxGirl,
       openTime: new Date(openTimeInput).toISOString(),
@@ -70,6 +88,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-xs sm:text-sm text-emerald-900 flex items-center gap-2">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
           <span>Stembrief instellings is suksesvol opgedateer!</span>
+        </div>
+      )}
+
+      {saveError && (
+        <div className="rounded-xl bg-rose-50 border border-rose-200 p-4 text-xs sm:text-sm text-rose-900 flex items-center gap-2">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+          <span>{saveError}</span>
         </div>
       )}
 

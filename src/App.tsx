@@ -255,6 +255,53 @@ export default function App() {
     });
   };
 
+  const handleCopyBallot = (ballotId: string) => {
+    const sourceBallot = ballots.find(
+      (ballot) => ballot.id === ballotId
+    );
+
+    if (!sourceBallot) {
+      return;
+    }
+
+    const copiedBallot: Ballot = {
+      id:
+        'ballot_' +
+        Date.now() +
+        '_' +
+        Math.random().toString(36).substring(2, 6),
+      name: `${sourceBallot.name} (Kopie)`,
+      accessCode: '',
+      validVoterIds: [],
+      manualVoterIds: [],
+      boysCandidates: sourceBallot.boysCandidates.map((candidate) => ({
+        ...candidate,
+      })),
+      girlsCandidates: sourceBallot.girlsCandidates.map((candidate) => ({
+        ...candidate,
+      })),
+      maxBoyPicks: sourceBallot.maxBoyPicks,
+      maxGirlPicks: sourceBallot.maxGirlPicks,
+      openTime: new Date().toISOString(),
+      closeTime: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
+      isManualOpen: false,
+      votes: [],
+      createdAt: new Date().toISOString(),
+    };
+
+    const nextBallots = [copiedBallot, ...ballots];
+
+    setBallots(nextBallots);
+    saveBallots(nextBallots);
+
+    saveBallotCloud(copiedBallot).catch(console.error);
+
+    setViewMode({
+      type: 'admin_ballot_detail',
+      ballotId: copiedBallot.id,
+    });
+  };
+
   const handleDeleteBallot = (ballotId: string) => {
     const filteredBallots = ballots.filter(
       (ballot) => ballot.id !== ballotId
@@ -423,6 +470,7 @@ export default function App() {
             ballots={ballots}
             onSaveAdminSettings={handleUpdateAdminSettings}
             onCreateBallot={handleCreateBallot}
+            onCopyBallot={handleCopyBallot}
             onDeleteBallot={handleDeleteBallot}
             onToggleManualOpen={handleToggleManualOpen}
             onSelectBallot={(ballotId) =>
@@ -439,6 +487,7 @@ export default function App() {
           currentBallot && (
             <BallotDetail
               ballot={currentBallot}
+              ballots={ballots}
               onBack={() =>
                 setViewMode({
                   type: 'admin_landing',

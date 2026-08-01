@@ -23,6 +23,7 @@ import { UserCheck } from 'lucide-react';
 
 interface BallotDetailProps {
   ballot: Ballot;
+  ballots: Ballot[];
   onBack: () => void;
   onUpdateBallot: (updatedBallot: Ballot) => void;
   onToggleManualOpen: (ballotId: string, isOpen: boolean) => void;
@@ -32,6 +33,7 @@ export type BallotTabType = 'overview' | 'live_results' | 'voter_ids' | 'candida
 
 export const BallotDetail: React.FC<BallotDetailProps> = ({
   ballot,
+  ballots,
   onBack,
   onUpdateBallot,
   onToggleManualOpen,
@@ -205,7 +207,7 @@ export const BallotDetail: React.FC<BallotDetailProps> = ({
         )}
         {activeTab === 'export' && <ExportDataTab ballot={ballot} />}
         {activeTab === 'settings' && (
-          <SettingsTab ballot={ballot} onUpdateBallot={onUpdateBallot} />
+          <SettingsTab ballot={ballot} ballots={ballots} onUpdateBallot={onUpdateBallot} />
         )}
       </div>
     </div>
