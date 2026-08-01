@@ -67,12 +67,13 @@ if (auth) {
 }
 
 /*
- * There is exactly one admin account. This email is never seen or
- * entered by anyone - it only exists so Firebase Auth has an identity
- * to sign in as. The admin password box on the landing page is the
- * only credential a person ever provides.
+ * There is exactly one admin account, identified by this email in
+ * Firebase Authentication (Console > Authentication > Users). It is
+ * never shown or entered by anyone in the app itself - the admin
+ * password box on the landing page is the only credential a person
+ * ever provides.
  */
-const ADMIN_EMAIL = 'admin@om-verkiesings.internal';
+const ADMIN_EMAIL = 'dricosnyman@gmail.com';
 
 enum OperationType {
   CREATE = 'create',
@@ -206,7 +207,9 @@ export async function signInAdmin(
     );
 
     return true;
-  } catch {
+  } catch (error) {
+    console.warn('Admin sign-in failed:', error);
+
     return false;
   }
 }
