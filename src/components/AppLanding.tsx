@@ -76,13 +76,14 @@ export const AppLanding: React.FC<AppLandingProps> = ({
   return (
     <div className="min-h-[calc(100vh-5rem)] bg-slate-50 flex flex-col items-center px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md flex-1 flex flex-col items-center">
-        {/* Equal spacer above the logo - matches the spacer below it, so the
-            logo sits exactly halfway between the header and the form card. */}
-        <div className="flex-1" />
+        {/* Equal spacer above the logo - capped so the gap stays modest, but
+            matches the spacer below it exactly, so the logo sits exactly
+            halfway between the header and the form card either way. */}
+        <div className="flex-1 max-h-10" />
 
         {/* School Branding */}
         <div className="text-center">
-          <div className="mx-auto w-[210px] h-[210px] rounded-[54px] bg-white flex items-center justify-center p-2 shadow-xl shadow-slate-900/10 border-0">
+          <div className="mx-auto w-[210px] h-[210px] rounded-2xl bg-white flex items-center justify-center p-2 shadow-xl shadow-slate-900/10 border-0">
             {adminSettings.schoolLogoUrl ? (
               <img
                 src={adminSettings.schoolLogoUrl}
@@ -96,7 +97,7 @@ export const AppLanding: React.FC<AppLandingProps> = ({
         </div>
 
         {/* Equal spacer below the logo - see note above. */}
-        <div className="flex-1" />
+        <div className="flex-1 max-h-10" />
 
         {/* Input Form Card */}
         <div className="w-full bg-white py-8 px-6 shadow-sm rounded-xl border border-slate-200/90 sm:px-8 mb-12">
