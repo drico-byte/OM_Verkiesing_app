@@ -97,7 +97,7 @@ export const AppLanding: React.FC<AppLandingProps> = ({
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   placeholder=""
-                  className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent focus:bg-white text-base font-mono uppercase tracking-wider transition-all"
+                  className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent focus:bg-white text-base font-mono tracking-wider transition-all"
                 />
               </div>
             </div>

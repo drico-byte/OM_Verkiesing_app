@@ -150,18 +150,18 @@ export const PrintReportModal: React.FC<PrintReportModalProps> = ({ ballot, onCl
         <div className="p-6 sm:p-10 md:p-12 bg-white text-slate-900 space-y-8 overflow-x-auto" id="printable-election-report">
           {/* Header Section */}
           <div className="border-b-2 border-slate-900 pb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                {settings.schoolLogoUrl ? (
-                  <img src={settings.schoolLogoUrl} alt={schoolName} className="h-[72px] w-[72px] object-contain shrink-0" />
-                ) : null}
+            <div className="flex items-center gap-3">
+              {settings.schoolLogoUrl ? (
+                <img src={settings.schoolLogoUrl} alt={schoolName} className="h-[72px] w-[72px] object-contain shrink-0" />
+              ) : null}
+              <div>
                 <h1 className="text-2xl font-black font-serif text-slate-900 tracking-tight uppercase">
                   {schoolName}
                 </h1>
+                <p className="text-sm font-bold text-slate-700 uppercase tracking-widest mt-0.5">
+                  Amptelike Verkiesingsverslag
+                </p>
               </div>
-              <p className="text-sm font-bold text-slate-700 uppercase tracking-widest mt-0.5">
-                Amptelike Verkiesingsverslag
-              </p>
             </div>
 
             <div className="text-left sm:text-right text-xs text-slate-600 font-mono space-y-1">
