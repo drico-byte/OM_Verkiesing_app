@@ -449,6 +449,7 @@ export default function App() {
       <main className="flex-1">
         {viewMode.type === 'app_landing' && (
           <AppLanding
+            adminSettings={adminSettings}
             ballots={ballots}
             onAdminLogin={() =>
               setViewMode({

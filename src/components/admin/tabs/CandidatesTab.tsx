@@ -21,9 +21,11 @@ export const CandidatesTab: React.FC<CandidatesTabProps> = ({
   const [gender, setGender] = useState<Gender>('seun');
   const [grade, setGrade] = useState('');
 
+  const candidatesLocked = ballot.votes.length > 0;
+
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (candidatesLocked || !name.trim()) return;
 
     const newCandidate: Candidate = {
       id: 'candidate_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
@@ -55,7 +57,7 @@ export const CandidatesTab: React.FC<CandidatesTabProps> = ({
   };
 
   const handleConfirmDeleteCandidate = () => {
-    if (!candidateToDelete) return;
+    if (candidatesLocked || !candidateToDelete) return;
     if (candidateToDelete.gender === 'seun') {
       const updatedBoys = ballot.boysCandidates.filter((c) => c.id !== candidateToDelete.id);
       onUpdateBallot({ ...ballot, boysCandidates: updatedBoys });
@@ -79,6 +81,13 @@ export const CandidatesTab: React.FC<CandidatesTabProps> = ({
 
   return (
     <div className="space-y-6 animate-fadeIn">
+      {candidatesLocked && (
+        <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-xs sm:text-sm text-amber-900 flex items-start gap-2.5">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <span>Kandidate kan nie meer gewysig word nie, aangesien stemme reeds ontvang is.</span>
+        </div>
+      )}
+
       {/* Search & Actions Header */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto flex-1">
@@ -131,7 +140,9 @@ export const CandidatesTab: React.FC<CandidatesTabProps> = ({
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm cursor-pointer"
+          disabled={candidatesLocked}
+          className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+          title={candidatesLocked ? 'Kandidate kan nie meer gewysig word nie, aangesien stemme reeds ontvang is.' : undefined}
         >
           <UserPlus className="w-4 h-4" />
           <span>Voeg Kandidaat Handmatig By</span>
@@ -171,13 +182,15 @@ export const CandidatesTab: React.FC<CandidatesTabProps> = ({
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => setCandidateToDelete(candidate)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors shrink-0 cursor-pointer"
-                    title="Skrap kandidaat"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {!candidatesLocked && (
+                    <button
+                      onClick={() => setCandidateToDelete(candidate)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors shrink-0 cursor-pointer"
+                      title="Skrap kandidaat"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -218,13 +231,15 @@ export const CandidatesTab: React.FC<CandidatesTabProps> = ({
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => setCandidateToDelete(candidate)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors shrink-0 cursor-pointer"
-                    title="Skrap kandidaat"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {!candidatesLocked && (
+                    <button
+                      onClick={() => setCandidateToDelete(candidate)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors shrink-0 cursor-pointer"
+                      title="Skrap kandidaat"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

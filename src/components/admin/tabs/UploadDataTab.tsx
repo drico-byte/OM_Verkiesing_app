@@ -8,6 +8,8 @@ interface UploadDataTabProps {
   onUpdateBallot: (updatedBallot: Ballot) => void;
 }
 
+type ImportMode = 'merge' | 'replace';
+
 export const UploadDataTab: React.FC<UploadDataTabProps> = ({
   ballot,
   onUpdateBallot,
@@ -16,6 +18,16 @@ export const UploadDataTab: React.FC<UploadDataTabProps> = ({
   const [parsedPreview, setParsedPreview] = useState<ParsedCsvResult | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null);
+  const [voterIdMode, setVoterIdMode] = useState<ImportMode>('merge');
+  const [candidateMode, setCandidateMode] = useState<ImportMode>('merge');
+
+  /*
+   * Once a ballot has votes, cast votes reference specific candidate IDs.
+   * Replacing (or removing) candidates at that point would silently orphan
+   * those votes from the tally, so candidates become fully locked - only
+   * voter IDs can still change.
+   */
+  const candidatesLocked = ballot.votes.length > 0;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -23,6 +35,8 @@ export const UploadDataTab: React.FC<UploadDataTabProps> = ({
       setSelectedFile(file);
       setIsParsing(true);
       setImportSuccessMessage(null);
+      setVoterIdMode('merge');
+      setCandidateMode('merge');
 
       const parsed = await parseDataCsv(file);
       setParsedPreview(parsed);
@@ -33,37 +47,88 @@ export const UploadDataTab: React.FC<UploadDataTabProps> = ({
   const handleApplyImport = () => {
     if (!parsedPreview) return;
 
-    // Merge or replace
-    const updatedVoters = Array.from(
-      new Set([...ballot.validVoterIds, ...parsedPreview.validVoterIds])
-    );
-
-    // Filter out candidates with duplicate names
-    const existingBoyNames = new Set(ballot.boysCandidates.map((b) => b.name.toLowerCase()));
-    const newBoys = parsedPreview.boysCandidates.filter(
-      (b) => !existingBoyNames.has(b.name.toLowerCase())
-    );
-
-    const existingGirlNames = new Set(ballot.girlsCandidates.map((g) => g.name.toLowerCase()));
-    const newGirls = parsedPreview.girlsCandidates.filter(
-      (g) => !existingGirlNames.has(g.name.toLowerCase())
-    );
-
     const sortByName = (a: Candidate, b: Candidate) =>
       a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+
+    /*
+     * Voter IDs: "replace" swaps out the bulk-sourced list but keeps any
+     * IDs the admin added by hand (those are usually deliberate one-offs,
+     * not something a bulk file replace should silently erase). If the
+     * file has no ID column at all, there is nothing to merge or replace,
+     * so the existing list is left untouched either way.
+     */
+    let updatedVoters = ballot.validVoterIds;
+
+    if (parsedPreview.validVoterIds.length > 0) {
+      updatedVoters =
+        voterIdMode === 'replace'
+          ? Array.from(
+              new Set([...parsedPreview.validVoterIds, ...(ballot.manualVoterIds || [])])
+            )
+          : Array.from(new Set([...ballot.validVoterIds, ...parsedPreview.validVoterIds]));
+    }
+
+    /*
+     * Candidates: locked entirely once votes exist. Otherwise, "replace"
+     * only takes effect per gender if the file actually contained
+     * candidates of that gender - a file that only lists girls, for
+     * example, should never wipe out the boys just because that column
+     * was empty.
+     */
+    let updatedBoys = ballot.boysCandidates;
+    let updatedGirls = ballot.girlsCandidates;
+    let newBoysCount = 0;
+    let newGirlsCount = 0;
+
+    if (!candidatesLocked) {
+      if (candidateMode === 'replace') {
+        if (parsedPreview.boysCandidates.length > 0) {
+          updatedBoys = [...parsedPreview.boysCandidates].sort(sortByName);
+        }
+        if (parsedPreview.girlsCandidates.length > 0) {
+          updatedGirls = [...parsedPreview.girlsCandidates].sort(sortByName);
+        }
+      } else {
+        const existingBoyNames = new Set(ballot.boysCandidates.map((b) => b.name.toLowerCase()));
+        const newBoys = parsedPreview.boysCandidates.filter(
+          (b) => !existingBoyNames.has(b.name.toLowerCase())
+        );
+        newBoysCount = newBoys.length;
+        updatedBoys = [...ballot.boysCandidates, ...newBoys].sort(sortByName);
+
+        const existingGirlNames = new Set(ballot.girlsCandidates.map((g) => g.name.toLowerCase()));
+        const newGirls = parsedPreview.girlsCandidates.filter(
+          (g) => !existingGirlNames.has(g.name.toLowerCase())
+        );
+        newGirlsCount = newGirls.length;
+        updatedGirls = [...ballot.girlsCandidates, ...newGirls].sort(sortByName);
+      }
+    }
 
     const updatedBallot: Ballot = {
       ...ballot,
       validVoterIds: updatedVoters,
-      boysCandidates: [...ballot.boysCandidates, ...newBoys].sort(sortByName),
-      girlsCandidates: [...ballot.girlsCandidates, ...newGirls].sort(sortByName),
+      boysCandidates: updatedBoys,
+      girlsCandidates: updatedGirls,
     };
 
     onUpdateBallot(updatedBallot);
 
-    setImportSuccessMessage(
-      `Sleuteldata suksesvol ingevoer! ${parsedPreview.validVoterIds.length} stemgemagtigde ID's, ${newBoys.length} nuwe seuns en ${newGirls.length} nuwe dogters is bygevoeg.`
-    );
+    const messageParts: string[] = [
+      voterIdMode === 'replace'
+        ? `Leerder ID's vervang (${parsedPreview.validVoterIds.length} nuwe ID's, handmatige ID's behou)`
+        : `${parsedPreview.validVoterIds.length} Leerder ID's verwerk`,
+    ];
+
+    if (candidatesLocked) {
+      messageParts.push('kandidate onveranderd (stemme reeds ontvang)');
+    } else if (candidateMode === 'replace') {
+      messageParts.push(`kandidate vervang (${updatedBoys.length} seuns, ${updatedGirls.length} dogters)`);
+    } else {
+      messageParts.push(`${newBoysCount} nuwe seuns en ${newGirlsCount} nuwe dogters bygevoeg`);
+    }
+
+    setImportSuccessMessage(messageParts.join(' | '));
     setSelectedFile(null);
     setParsedPreview(null);
   };
@@ -168,6 +233,87 @@ export const UploadDataTab: React.FC<UploadDataTabProps> = ({
                 ))}
               </div>
             )}
+
+            {/* Merge vs Replace choices */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                  Leerder ID's
+                </span>
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs w-full sm:w-fit">
+                  <button
+                    type="button"
+                    onClick={() => setVoterIdMode('merge')}
+                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      voterIdMode === 'merge'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Voeg By
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVoterIdMode('replace')}
+                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      voterIdMode === 'replace'
+                        ? 'bg-amber-500 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Vervang
+                  </button>
+                </div>
+                {voterIdMode === 'replace' && (
+                  <p className="text-[11px] text-amber-700">
+                    Bestaande bulk-ID's word vervang met dié in die lêer. Handmatig bygevoegde ID's word behou.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                  Kandidate
+                </span>
+                {candidatesLocked ? (
+                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                    Gesluit - stemme is reeds ontvang. Slegs Leerder ID's uit hierdie lêer sal verwerk word.
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs w-full sm:w-fit">
+                      <button
+                        type="button"
+                        onClick={() => setCandidateMode('merge')}
+                        className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                          candidateMode === 'merge'
+                            ? 'bg-white text-slate-900 shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Voeg By
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCandidateMode('replace')}
+                        className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                          candidateMode === 'replace'
+                            ? 'bg-amber-500 text-white shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Vervang
+                      </button>
+                    </div>
+                    {candidateMode === 'replace' && (
+                      <p className="text-[11px] text-amber-700">
+                        Bestaande kandidate word vervang (per geslag, slegs indien die lêer kandidate van daardie geslag bevat).
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
 
             <div className="pt-2 flex items-center justify-end gap-3">
               <button

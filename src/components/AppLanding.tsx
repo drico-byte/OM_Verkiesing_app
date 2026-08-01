@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { KeyRound, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
-import { Ballot } from '../types';
+import { KeyRound, ArrowRight, AlertCircle, Loader2, School } from 'lucide-react';
+import { AdminSettings, Ballot } from '../types';
 import { signInAdmin } from '../lib/firebase';
 
 interface AppLandingProps {
+  adminSettings: AdminSettings;
   ballots: Ballot[];
   onAdminLogin: () => void;
   onEnterLearnerBallot: (ballotId: string) => void;
 }
 
 export const AppLanding: React.FC<AppLandingProps> = ({
+  adminSettings,
   ballots,
   onAdminLogin,
   onEnterLearnerBallot,
@@ -74,6 +76,21 @@ export const AppLanding: React.FC<AppLandingProps> = ({
   return (
     <div className="min-h-[calc(100vh-5rem)] bg-slate-50 flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8 mt-[22px] rounded-[30px]">
+        {/* School Branding */}
+        <div className="text-center">
+          <div className="mx-auto w-[140px] h-[140px] rounded-[36px] bg-white flex items-center justify-center p-2 shadow-xl shadow-slate-900/10 border-0">
+            {adminSettings.schoolLogoUrl ? (
+              <img
+                src={adminSettings.schoolLogoUrl}
+                alt="Skool Emblem"
+                className="w-full h-full object-contain rounded-xl"
+              />
+            ) : (
+              <School className="w-12 h-12 text-slate-800" />
+            )}
+          </div>
+        </div>
+
         {/* Input Form Card */}
         <div className="bg-white py-8 px-6 shadow-sm rounded-xl border border-slate-200/90 sm:px-8">
           <form className="space-y-6" onSubmit={handleSubmit}>
