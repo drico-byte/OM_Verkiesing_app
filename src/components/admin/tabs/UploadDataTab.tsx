@@ -235,8 +235,8 @@ export const UploadDataTab: React.FC<UploadDataTabProps> = ({
             )}
 
             {/* Merge vs Replace choices */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div className="space-y-1.5">
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-4 sm:gap-8 pt-2">
+              <div className="space-y-1.5 sm:text-right">
                 <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
                   Leerder ID's
                 </span>
@@ -271,7 +271,7 @@ export const UploadDataTab: React.FC<UploadDataTabProps> = ({
                 )}
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 sm:text-right">
                 <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
                   Kandidate
                 </span>
