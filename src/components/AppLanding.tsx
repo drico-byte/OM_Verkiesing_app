@@ -1,23 +1,22 @@
 import React, { useState } from 'react';
 import { KeyRound, ArrowRight, AlertCircle, Loader2, School, Lock, ArrowLeft } from 'lucide-react';
-import { AdminSettings, Ballot } from '../types';
-import { signInAdmin } from '../lib/firebase';
+import { AdminSettings } from '../types';
+import { signInAdmin, findBallotByAccessCode } from '../lib/firebase';
 
 interface AppLandingProps {
   adminSettings: AdminSettings;
-  ballots: Ballot[];
   onAdminLogin: () => void;
   onEnterLearnerBallot: (ballotId: string) => void;
 }
 
 export const AppLanding: React.FC<AppLandingProps> = ({
   adminSettings,
-  ballots,
   onAdminLogin,
   onEnterLearnerBallot,
 }) => {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
@@ -31,8 +30,15 @@ export const AppLanding: React.FC<AppLandingProps> = ({
    * and during a live vote with hundreds of typos, that was enough to
    * trip Firebase Auth's brute-force protection and lock the real admin
    * out. Admin login now lives in its own separate form below.
+   *
+   * The ballot itself is looked up fresh from Firestore on every
+   * submit, rather than matched against a locally cached list. Access
+   * codes get reused across ballots (e.g. a same-day retry reusing the
+   * original code), so a device with a stale local copy of an old
+   * ballot under that code could otherwise show a false "closed" error
+   * even though the current ballot with that code is open.
    */
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -42,9 +48,9 @@ export const AppLanding: React.FC<AppLandingProps> = ({
       return;
     }
 
-    const matchingBallot = ballots.find(
-      (b) => b.accessCode.trim().toLowerCase() === trimmedCode.toLowerCase()
-    );
+    setIsSubmitting(true);
+    const matchingBallot = await findBallotByAccessCode(trimmedCode);
+    setIsSubmitting(false);
 
     if (!matchingBallot) {
       setError('Ongeldige verkiesingskode. Kontroleer asseblief jou kode en probeer weer.');
@@ -159,10 +165,20 @@ export const AppLanding: React.FC<AppLandingProps> = ({
 
               <button
                 type="submit"
-                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-md shadow-slate-900/10 text-base font-bold text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-all cursor-pointer transform active:scale-[0.99]"
+                disabled={isSubmitting}
+                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-md shadow-slate-900/10 text-base font-bold text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-all cursor-pointer transform active:scale-[0.99]"
               >
-                <span className="text-[#EAC321]">Gaan Voort na Stembrief</span>
-                <ArrowRight className="w-5 h-5 text-[#EAC321]" />
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 text-[#EAC321] animate-spin" />
+                    <span className="text-[#EAC321]">Besig...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-[#EAC321]">Gaan Voort na Stembrief</span>
+                    <ArrowRight className="w-5 h-5 text-[#EAC321]" />
+                  </>
+                )}
               </button>
 
               <button

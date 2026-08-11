@@ -13,6 +13,7 @@ import {
   doc,
   getDoc,
   getDocFromServer,
+  getDocs,
   getFirestore,
   onSnapshot,
   orderBy,
@@ -348,6 +349,71 @@ export async function saveAdminSettingsCloud(
     );
 
     return false;
+  }
+}
+
+/*
+ * A fresh, one-time lookup by access code, instead of matching against
+ * whatever ballot list happens to already be sitting in local state
+ * (from localStorage or a subscription that hasn't caught up yet).
+ *
+ * Access codes get reused across ballots (e.g. a duplicated ballot
+ * reusing an old one's code for a same-day retry). A device that had
+ * an earlier version of that code's ballot cached locally - closed, or
+ * pointing at a different document entirely - could otherwise match
+ * the wrong, stale ballot and show an incorrect "closed" error even
+ * though the current ballot with that code is open. This always reads
+ * the live data at the moment someone actually submits a code.
+ */
+export async function findBallotByAccessCode(
+  accessCode: string
+): Promise<Ballot | null> {
+  if (!db) {
+    return null;
+  }
+
+  const trimmedCode = accessCode.trim().toLowerCase();
+
+  try {
+    const snapshot = await getDocs(collection(db, 'ballots'));
+
+    for (const documentSnapshot of snapshot.docs) {
+      const data = documentSnapshot.data();
+
+      if (
+        typeof data.accessCode === 'string' &&
+        data.accessCode.trim().toLowerCase() === trimmedCode
+      ) {
+        return {
+          id: documentSnapshot.id,
+          name: '',
+          accessCode: '',
+          thankYouMessage: '',
+          validVoterIds: [],
+          manualVoterIds: [],
+          boysCandidates: [],
+          girlsCandidates: [],
+          maxBoyPicks: 0,
+          maxGirlPicks: 0,
+          openTime: new Date().toISOString(),
+          closeTime: new Date().toISOString(),
+          isManualOpen: true,
+          createdAt: new Date().toISOString(),
+          ...data,
+          votes: [],
+        } as Ballot;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    handleFirestoreError(
+      error,
+      OperationType.LIST,
+      'ballots'
+    );
+
+    return null;
   }
 }
 

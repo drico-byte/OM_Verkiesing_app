@@ -464,7 +464,6 @@ export default function App() {
         {viewMode.type === 'app_landing' && (
           <AppLanding
             adminSettings={adminSettings}
-            ballots={ballots}
             onAdminLogin={() =>
               setViewMode({
                 type: 'admin_landing',
