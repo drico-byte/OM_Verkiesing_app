@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KeyRound, ArrowRight, AlertCircle, Loader2, School, Lock, ArrowLeft } from 'lucide-react';
+import { KeyRound, ArrowRight, AlertCircle, Loader2, School, Lock, ArrowLeft, Mail } from 'lucide-react';
 import { AdminSettings } from '../types';
 import { signInAdmin, findBallotByAccessCode } from '../lib/firebase';
 
@@ -19,6 +19,7 @@ export const AppLanding: React.FC<AppLandingProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminError, setAdminError] = useState<string | null>(null);
   const [isAdminSubmitting, setIsAdminSubmitting] = useState(false);
@@ -83,14 +84,16 @@ export const AppLanding: React.FC<AppLandingProps> = ({
     e.preventDefault();
     setAdminError(null);
 
+    const trimmedEmail = adminEmail.trim();
     const trimmedPassword = adminPassword.trim();
-    if (!trimmedPassword) {
-      setAdminError('Voer asseblief die admin-wagwoord in.');
+
+    if (!trimmedEmail || !trimmedPassword) {
+      setAdminError('Voer asseblief jou admin e-pos en wagwoord in.');
       return;
     }
 
     setIsAdminSubmitting(true);
-    const isAdmin = await signInAdmin(trimmedPassword);
+    const isAdmin = await signInAdmin(trimmedEmail, trimmedPassword);
     setIsAdminSubmitting(false);
 
     if (isAdmin) {
@@ -194,15 +197,34 @@ export const AppLanding: React.FC<AppLandingProps> = ({
             </form>
           ) : (
             <form className="space-y-6" onSubmit={handleAdminSubmit}>
-              <div className="text-center">
-                <label htmlFor="adminPassword" className="block text-xl sm:text-2xl font-bold text-slate-900 text-center">
-                  Admin Aanmelding
-                </label>
-                <p className="text-xs text-slate-500 mt-1 text-center">
-                  Voer die administrateur-wagwoord in.
-                </p>
+              <div className="text-center space-y-4">
+                <div>
+                  <label htmlFor="adminEmail" className="block text-xl sm:text-2xl font-bold text-slate-900 text-center">
+                    Admin Aanmelding
+                  </label>
+                  <p className="text-xs text-slate-500 mt-1 text-center">
+                    Voer jou admin e-posadres en wagwoord in.
+                  </p>
+                </div>
 
-                <div className="mt-2 relative rounded-xl shadow-xs">
+                <div className="relative rounded-xl shadow-xs">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Mail className="h-5 w-5" />
+                  </div>
+                  <input
+                    id="adminEmail"
+                    name="adminEmail"
+                    type="email"
+                    required
+                    autoFocus
+                    value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)}
+                    placeholder="jou@skool.co.za"
+                    className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent focus:bg-white text-base tracking-wider transition-all"
+                  />
+                </div>
+
+                <div className="relative rounded-xl shadow-xs">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <Lock className="h-5 w-5" />
                   </div>
@@ -211,7 +233,6 @@ export const AppLanding: React.FC<AppLandingProps> = ({
                     name="adminPassword"
                     type="password"
                     required
-                    autoFocus
                     value={adminPassword}
                     onChange={(e) => setAdminPassword(e.target.value)}
                     className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent focus:bg-white text-base font-mono tracking-wider transition-all"
@@ -248,6 +269,7 @@ export const AppLanding: React.FC<AppLandingProps> = ({
                 type="button"
                 onClick={() => {
                   setShowAdminLogin(false);
+                  setAdminEmail('');
                   setAdminPassword('');
                   setAdminError(null);
                 }}

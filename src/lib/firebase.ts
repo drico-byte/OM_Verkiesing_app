@@ -68,15 +68,6 @@ if (auth) {
   setPersistence(auth, browserSessionPersistence);
 }
 
-/*
- * There is exactly one admin account, identified by this email in
- * Firebase Authentication (Console > Authentication > Users). It is
- * never shown or entered by anyone in the app itself - the admin
- * password box on the landing page is the only credential a person
- * ever provides.
- */
-const ADMIN_EMAIL = 'drico@wsinhoud.com';
-
 enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
@@ -195,6 +186,7 @@ function sanitizeForFirestore<T>(data: T): T {
 }
 
 export async function signInAdmin(
+  email: string,
   password: string
 ): Promise<boolean> {
   if (!auth) {
@@ -204,7 +196,7 @@ export async function signInAdmin(
   try {
     await signInWithEmailAndPassword(
       auth,
-      ADMIN_EMAIL,
+      email,
       password
     );
 
