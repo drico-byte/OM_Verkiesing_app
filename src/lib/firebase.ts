@@ -11,6 +11,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocFromServer,
   getFirestore,
   onSnapshot,
@@ -506,6 +507,37 @@ export async function deleteBallotCloud(
       error,
       OperationType.DELETE,
       path
+    );
+
+    return false;
+  }
+}
+
+/*
+ * A single targeted read for one voter ID, instead of subscribing to
+ * (or downloading) the whole votes subcollection just to check whether
+ * one document is in it. Used by the learner-facing "have I already
+ * voted" check, which only ever needs a one-off answer, not a live feed.
+ */
+export async function hasVoterAlreadyVoted(
+  ballotId: string,
+  voterId: string
+): Promise<boolean> {
+  if (!db) {
+    return false;
+  }
+
+  try {
+    const voteSnapshot = await getDoc(
+      doc(db, 'ballots', ballotId, 'votes', voterId)
+    );
+
+    return voteSnapshot.exists();
+  } catch (error) {
+    handleFirestoreError(
+      error,
+      OperationType.GET,
+      `ballots/${ballotId}/votes/${voterId}`
     );
 
     return false;

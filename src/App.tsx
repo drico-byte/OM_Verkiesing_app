@@ -155,14 +155,28 @@ export default function App() {
   /*
    * Subscribe separately to every ballot's votes subcollection.
    * Each learner vote is stored in its own Firestore document.
+   *
+   * This is intentionally admin-only. Live vote data is only ever
+   * displayed in the admin dashboard (participation counts, live
+   * results, the candidates/voter-ID lock). If every learner's browser
+   * also held this subscription open, each new vote cast during a live
+   * election would fan out as a billed read to every other connected
+   * learner too - hundreds of listeners for data none of them use,
+   * which is what blew through the Firestore daily quota during the
+   * first attempt. Learners only ever need a one-off "have I already
+   * voted" check, handled separately in LearnerBallotLanding.
    */
+  const isAdminView =
+    viewMode.type === 'admin_landing' ||
+    viewMode.type === 'admin_ballot_detail';
+
   const ballotIds = ballots
     .map((ballot) => ballot.id)
     .sort()
     .join('|');
 
   useEffect(() => {
-    if (!ballotIds) {
+    if (!isAdminView || !ballotIds) {
       return;
     }
 
@@ -192,7 +206,7 @@ export default function App() {
         unsubscribe();
       });
     };
-  }, [ballotIds]);
+  }, [isAdminView, ballotIds]);
 
   const handleUpdateAdminSettings = (newSettings: AdminSettings) => {
     setAdminSettings(newSettings);

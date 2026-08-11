@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { UserCheck, ArrowRight, AlertCircle, School, Lock, ArrowLeft } from 'lucide-react';
+import { UserCheck, ArrowRight, AlertCircle, School, Lock, ArrowLeft, Loader2 } from 'lucide-react';
 import { AdminSettings, Ballot } from '../../types';
+import { hasVoterAlreadyVoted } from '../../lib/firebase';
 
 interface LearnerBallotLandingProps {
   adminSettings: AdminSettings;
@@ -17,8 +18,9 @@ export const LearnerBallotLanding: React.FC<LearnerBallotLandingProps> = ({
 }) => {
   const [voterIdInput, setVoterIdInput] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -38,10 +40,11 @@ export const LearnerBallotLanding: React.FC<LearnerBallotLandingProps> = ({
       return;
     }
 
-    // 2. Check if ID has already voted in this ballot
-    const hasAlreadyVoted = ballot.votes.some(
-      (v) => v.voterId.trim().toLowerCase() === trimmedId.toLowerCase()
-    );
+    // 2. Check if ID has already voted in this ballot (a single targeted
+    // lookup, not a live subscription - see App.tsx for why).
+    setIsChecking(true);
+    const hasAlreadyVoted = await hasVoterAlreadyVoted(ballot.id, trimmedId);
+    setIsChecking(false);
 
     if (hasAlreadyVoted) {
       setError('Hierdie Leerder ID het reeds n stem vir hierdie verkiesing ingedien. Elkeen mag slegs een keer stem.');
@@ -110,10 +113,20 @@ export const LearnerBallotLanding: React.FC<LearnerBallotLandingProps> = ({
 
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-md shadow-slate-900/10 text-base font-bold text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-all cursor-pointer transform active:scale-[0.99]"
+              disabled={isChecking}
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-md shadow-slate-900/10 text-base font-bold text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-all cursor-pointer transform active:scale-[0.99]"
             >
-              <span>Begin Stemming</span>
-              <ArrowRight className="w-5 h-5" />
+              {isChecking ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Besig...</span>
+                </>
+              ) : (
+                <>
+                  <span>Begin Stemming</span>
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
             </button>
           </form>
 
