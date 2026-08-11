@@ -75,7 +75,7 @@ if (auth) {
  * password box on the landing page is the only credential a person
  * ever provides.
  */
-const ADMIN_EMAIL = 'dricosnyman@gmail.com';
+const ADMIN_EMAIL = 'drico@wsinhoud.com';
 
 enum OperationType {
   CREATE = 'create',
